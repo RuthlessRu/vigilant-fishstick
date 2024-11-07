@@ -1,0 +1,27 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+\begin{abstract}
+Our project is to build a deep learning model that can recognize emotions in 
+human speech. By identifying emotions like happiness, sadness, anger, and 
+surprise, this could potentially allow virtual assistants or music apps to 
+adjust their responses based on how a person feels.
+To achieve this, we propose to use a type of deep learning model called a 
+Convolutional Recurrent Neural Network. The idea is that our CRNN combines 
+layers that pick up important sound features with layers that track changes 
+over time, making it a good fit for picking up patterns in speech.
+Moreover, our training data will come from the Toronto Emotional Speech Set. 
+This data set has over 2800 audio samples spoken by two voice actresses. 
+Before feeding this data, we plan to apply data preprocessing techniques like 
+removing background noise and converting the audio to visual spectrograms. Then 
+we plan to implement a dynamic learning rate scheduler. This essentially allows 
+us to adjust the learning rate of our CRNN during the training process, which 
+optimizes our training speed.
+Lastly, some extra techniques we plan to use to help generalize speech patterns 
+are pitch shifting and time stretching. Pitch shifting changes the tone of the 
+sound, making it higher or lower. While time stretching changes how fast or 
+slow the sound is, but keeps the tone untouched.
+\end{abstract}
+
+\end{document}

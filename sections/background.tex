@@ -1,0 +1,57 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+\section{Background and Related Works} 
+Speech signals are the natural medium of 
+human communication that convey information about the speaker's message, 
+perspective and identity as well as their emotions. Speech Emotion Recognition 
+(SER) is a classification problem that aims to infer the emotional state of a 
+speaker from speech signals. Although recognizing emotions is easy for humans, 
+it is a challenging task for machines. This is because speech itself is a 
+complex signal that differs from person to person and can change depending on 
+context and intonation \citep{Hashem2023} \citep{Koduru2020}. In recent years, there have been successful attempts at 
+using Deep Neural Networks (DNN) and Convolutional Neural Networks (CNN) to 
+recognize emotions from speech \citep{Pham2023} \cite{Zhang2018}. These attempts have also stressed the importance 
+of finding meaningful features through feature extraction in SER.
+
+\subsection{Feature Extraction for SER} 
+Emotions in speech can be expressed 
+through subtle variations in pitch, tone, energy, and timing. The goal of this 
+step is to find features that can be extracted from input audio to differentiate 
+between different emotions. Previous works have made use of a combination of 
+acoustic features which include prosodic and spectral features for SER 
+classification. Language information may be used as well but is often paired 
+with acoustic features \citep{Pham2023} \cite{Zhang2018}. 
+
+Prosodic features are features that are related to 
+pitch, loudness, rhythm, tempo, and intonation, which give clues about how 
+something is said rather than what is said. These features provide a way to 
+differentiate emotions of different arousal (intensity) levels, such as happy 
+and sad. However, they can't differentiate between emotions of the same arousal 
+level but different valence (positivity), such as happy and angry. Spectral 
+features are features that capture frequency of speech signals. The most common 
+of these features are Mel-Frequency Cepstral Coefficients (MFCCs) \citep{Hashem2023}. Although 
+these handcrafted features seem meaningful, they might not be enough for SER \citep{Koduru2020}. 
+In this case, deep learning can be trained on Mel-spectrograms that represent 
+audio in a more informative time-frequency graph.
+
+\subsection{CRNN for SER} 
+Most SER models use deep learning as they provide 
+better results than traditional machine learning models and can learn features 
+from complex raw data. These models often include Convolutional Neural Networks 
+(CNN) and Recurrent Neural Networks (RNN) or a combination of both \citep{Hashem2023}. CNNs are 
+effective at capturing important patterns that occur in Mel-spectrograms. 
+Recurrent Neural Networks (RNN) , specifically Long Short-Term Memory (LSTM) 
+networks are effective at handling sequential input data such as audio.
+
+\subsection{Attention Mechanism} 
+Not all features of the speech signal might 
+be relevant in recognizing emotions \citep{Hashem2023}. For example, a speaker might sound neutral 
+in the beginning and ending of a sentence but sound angry in the middle. The 
+classifier should focus on the features that occur in the middle of the 
+sequence. This leads to using attention mechanisms to improve the performance 
+of LSTM networks by putting more emphasis on certain parts of the input 
+sequence.
+
+\end{document}
