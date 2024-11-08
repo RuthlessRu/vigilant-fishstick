@@ -1,10 +1,10 @@
 \documentclass[../main.tex]{subfiles}
-
+\usepackage{hyperref}
 \begin{document}
 
 \section{Model Architecture}
-After a thorough investigation of the TESS Dataset, we propose a Convolutional
-Recurrent Neural Network (CRNN) architecture.
+After a thorough investigation of the TESS Dataset, we propose a \hyperref[fig:architecture]{Convolutional
+Recurrent Neural Network (CRNN) architecture}.
 
 \subsection{Input Processing}
 In order to ensure uniformity across the TESS dataset, we apply a standardized
@@ -67,5 +67,12 @@ Additionally, to enhance the robustness of the model, we apply audio-specific
 data augmentation. Augmentations such as random pitch shifting and
 time-stretching effectively expand our dataset by introducing slight variability
 in existing data, in turn making our model less prone to overfitting \citep{Bhatlawande2024}. These protocols ensure model robustness, aiding us in our goal of building a truly useful and reliable voice-based emotion classifier.
+
+\begin{figure}[h]
+    \centering
+    \includestandalone[mode=buildnew, width=\textwidth]{architecture_figure}
+    \caption{Figure 2: Proposed CRNN Model Architecture for Emotion Classification}
+    \label{fig:architecture}
+\end{figure}
 
 \end{document}
