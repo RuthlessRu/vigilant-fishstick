@@ -30,17 +30,17 @@ something is said rather than what is said. These features provide a way to
 differentiate emotions of different arousal (intensity) levels, such as happy 
 and sad. However, they can't differentiate between emotions of the same arousal 
 level but different valence (positivity), such as happy and angry. Spectral 
-features are features that capture frequency of speech signals. The most common 
+features are features that capture the frequency of speech signals. The most common 
 of these features are Mel-Frequency Cepstral Coefficients (MFCCs) \citep{Hashem2023}. Although 
 these handcrafted features seem meaningful, they might not be enough for SER \citep{Koduru2020}. 
 In this case, deep learning can be trained on Mel-spectrograms.
 
-A Mel-spectrogram is a feature that provides a way to visually reprsent changes in loundless 
+A Mel-spectrogram is a feature that provides a way to visually represent changes in loundness 
 and frequency in a speech signal over time. The finer details of this
 feature aren't necessary to know but can provide useful context. The Mel part of the name comes 
 from scaling frequency in a way that matches the human auditory perception. 
-The spectrogram part means that different parts a speech 
-signal input is mapped to from a time domain to a frequency domain using 
+The spectrogram part means that different parts of a speech 
+signal input are mapped from a time domain to a frequency domain using 
 fast Fourier transform before being stacked together. The result of stacking is 
 then a graph that maps time-frequency to loudness \citep{Roberts2020}. 
 
@@ -50,13 +50,13 @@ better results than traditional machine learning models and can learn features
 from complex raw data. These models often include Convolutional Neural Networks 
 (CNN) and Recurrent Neural Networks (RNN) or a combination of both \citep{Hashem2023}. CNNs are 
 effective at capturing important patterns that occur in Mel-spectrograms. 
-Recurrent Neural Networks (RNN) , specifically Long Short-Term Memory (LSTM) 
+Recurrent Neural Networks (RNN), specifically Long Short-Term Memory (LSTM) 
 networks are effective at handling sequential input data such as audio.
 
 \subsection{Attention Mechanism} 
 Not all features of the speech signal might 
 be relevant in recognizing emotions \citep{Hashem2023}. For example, a speaker might sound neutral 
-in the beginning and ending of a sentence but sound angry in the middle. The 
+at the beginning and ending of a sentence but sound angry in the middle. The 
 classifier should focus on the features that occur in the middle of the 
 sequence. This leads to using attention mechanisms to improve the performance 
 of LSTM networks by putting more emphasis on certain parts of the input 

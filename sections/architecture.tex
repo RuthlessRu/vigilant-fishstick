@@ -12,22 +12,22 @@ preprocessing pipeline to the raw audio signals. First, each sound bite is
 resampled to a fixed rate and then normalized to a consistent amplitude. Second,
 silence segments are removed to minimize irrelevant input (noise) \citep{Orhan2021}, and segmented
 to a fixed length; shorter samples are padded while longer samples are trimmed.
-Finally, each processed sample is converted into a Mel-spectogram. In effect,
+Finally, each processed sample is converted into a Mel-spectrogram. In effect,
 this transformation reduces the dimensionality of the audio data while
 preserving essential information about the temporal and spectral characteristics
 of the speech \citep{Orhan2021}.
 
 \subsection{Convolutional Layers}
 The CRNN architecture is initiated by a series of three-dimensional convolutional
-layers designed to extract progressively abstract features from the spectogram
+layers designed to extract progressively abstract features from the spectrogram
 input. The first block employs local feature detection, using small kernels to
 capture micro-level emotional indicators and basic acoustic patterns. As the
-layers deepen, the receptive fields gets larger to capture broader, higher-level
+layers deepen, the receptive fields get larger to capture broader, higher-level
 abstractions, such as intonation patterns or general timbral characteristics of
 certain emotions. Each convolution is followed by a max-pooling layer which
 reduces the spatial dimensions of the feature maps. Moreover, batch
 normalization and dropout is applied after each convolutional layer to stabilize
-learning and prevent overfitting. These convolutional layers help the model ``learn affective salient features for SER and show excellent performances on several benchmark datasets'' \citep{Chen2018}.
+learning and prevent overfitting. These convolutional layers help the model ``learn effective salient features for SER and show excellent performances on several benchmark datasets'' \citep{Chen2018}.
 
 \subsection{Recurrent Layers}
 Following the convolutional layers, the model incorporates two bidirectional
@@ -43,9 +43,9 @@ the objective of emotion identification over the course of the audio sample.
 To help the model focus on the most salient temporal features for emotion
 recognition, an attention mechanism is incorporated after the BiLSTM layers \citep{Peng2020}, \citep{Chen2018}.
 More precisely, the attention module calculates a weighted sum of the hidden
-states from the BiLSTM, where the weights are determined by both current hidden
+states from the BiLSTM, where the weights are determined by both the current hidden
 state and the overall sequence of hidden states \citep{Chen2018}. This can be exceptionally
-useful since it allows the model to dynamically weight the importance of
+useful since it allows the model to dynamically weigh the importance of
 different time steps, emphasizing parts of the audio where emotional cues are
 the strongest, thus possibly improving model performance.
 
@@ -53,7 +53,7 @@ the strongest, thus possibly improving model performance.
 Finally, after both the CNN and RNN modules, the resulting features are passed
 through a fully-connected dense layer. This integration layer is crucial since
 it combines our high-level temporal and spatial features into a single, unified
-representation \citep{Chen2018}. To enhance generalization, dropout is applied within the layer.
+representation \citep{Chen2018}. To enhance generalization, dropout are applied within the layer.
 In turn, this refined representation helps transition our data into the final
 softmax output layer, producing a probability distribution across the seven
 emotion classes.
