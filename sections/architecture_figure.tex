@@ -1,0 +1,186 @@
+\documentclass[border=15pt, multi, tikz]{standalone}
+\usepackage{import}
+\subimport{./layers/}{init}
+\usetikzlibrary{positioning}
+\usepackage{lmodern} 
+\usetikzlibrary{3d} %for including external image 
+
+\usepackage{my_colors}
+
+
+\begin{document}
+
+\begin{tikzpicture}
+\tikzset{every node/.style={font=\huge}}
+
+\tikzstyle{connection}=[ultra thick,every node/.style={sloped,allow upside down},draw=\edgecolor,opacity=0.7]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Draw Layer Blocks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Title at the top
+\draw (17, 8) node[font=\fontsize{52}{58}\sffamily\bfseries]{CRNN Model Architecture};
+\node[canvas is zy plane at x=0] (temp) at (-3,0,0){\includegraphics[width=8cm,height=8cm]{soundimage.jpg}};
+% conv1_1,conv1_2
+\pic[shift={(0,0,0)}] at (0,0,0) {RightBandedBox={name=cr1,caption={Input Processing},%
+        fill=\InputColor,%
+        height=40,width={8},depth=40}};
+%pool1
+\pic[shift={(0,0,0)}] at (cr1-east) {Box={name=inpt1,%
+        fill=\InputColor,opacity=0.5,height=35,width=1,depth=35}};
+
+\pic[shift={(0.2,0,0)}] at (cr1-east) {Box={name=inpt2,%
+        fill=\InputColor,opacity=0.5,height=32,width=0.8,depth=35}};
+
+\pic[shift={(3,0,0)}] at (cr1-east) {Box={name=p1,%
+        fill=\MelSpecColor,opacity=0.5,height=32,caption={Mel-Spectrogram}, width=0.8,depth=35}};
+%%%%%%%%%%
+
+% conv2_1,conv2_2
+\pic[shift={(3,0,0)}] at (p1-east) {RightBandedBox={name=cnnbox,caption=CNN Module,%
+        fill=\ConvColor,bandfill=\ConvReluColor,%
+        height=32,width={30},depth=30}};
+
+\pic[shift={(-5,-13,0)}] at (p1-east) {RightBandedBox={name=cr2,caption=conv2D 1,%
+        fill=\ConvColor,bandfill=\ConvReluColor,%
+        height=35,width={3,3},depth=35}};
+
+% conv2_1,conv2_2
+\pic[shift={(-3.8,-13,0)}] at (p1-east) {RightBandedBox={name=bn1,%
+        fill=\BNColor,height=35,width={1},depth=35}};
+
+\pic[shift={(-3.6,-13,0)}] at (p1-east) {RightBandedBox={name=dp1,%
+        fill=\DropColor,height=35,width={1},depth=35}};
+
+%pool2
+\pic[shift={(0.1,0,0)}] at (dp1-east) {Box={name=p2,%
+        fill=\PoolColor,opacity=0.5,height=30,width=1,depth=30}};
+
+
+%%%%%%%%%%
+% conv3_1,conv3_2
+\pic[shift={(2,0,0)}] at (p2-east) {RightBandedBox={name=cr3,caption=conv2D 2,%
+        fill=\ConvColor,bandfill=\ConvReluColor,%
+        height=30,width={4,4,4},depth=30}};
+\pic[shift={(4.2,0,0)}] at (p2-east) {RightBandedBox={name=bn1,%
+        fill=\BNColor,%
+        height=30,width={1},depth=30}};
+\pic[shift={(4.4,0,0)}] at (p2-east) {RightBandedBox={name=bn1,%
+        fill=\DropColor,%
+        height=30,width={1},depth=30}};
+
+%pool3
+\pic[shift={(0.3,0,0)}] at (cr3-east) {Box={name=p3,%
+        fill=\PoolColor,opacity=0.5,height=23,width=1,depth=23}};
+%%%%%%%%%%
+% conv4_1,conv4_2,conv4_3
+\pic[shift={(1.8,0,0)}] at (p3-east) {RightBandedBox={name=cr4,caption=conv2D 3,%
+        fill=\ConvColor,bandfill=\ConvReluColor,%
+        height=23,width={7,7,7},depth=23}};
+\pic[shift={(6,0,0)}] at (p3-east) {RightBandedBox={name=bn3,%
+        fill=\BNColor,
+        height=23,width={1},depth=23}};
+\pic[shift={(6.2,0,0)}] at (p3-east) {RightBandedBox={name=dp3,%
+        fill=\DropColor,
+        height=23,width={1},depth=23}};
+%pool4
+\pic[shift={(0.6,0,0)}] at (cr4-east) {Box={name=p4,%
+        fill=\PoolColor,opacity=0.5,height=15,width=1,depth=15}};
+%%%%%%%%%%
+% conv5_1,conv5_2,conv5_3
+\pic[shift={(3,0,0)}] at (cnnbox-east) {RightBandedBox={name=cr5,caption=Feature-Sequence,%
+        fill=\FeatureColor,bandfill=\FeatureColor,%
+        height=15,width={3},depth=15}};
+%%%%%%%%%%     
+%% RNN
+\pic[shift={(3,0,0)}] at (cr5-east) {RightBandedBox={name=rnnbox,%
+        fill=\RNNColor,bandfill=\RNNColor,%
+        height=20,width={20},depth=20, caption=RNN Module}};
+
+\pic[shift={(0,-13,0)}] at (cr5-east) {RightBandedBox={name=cr6_7_2,%
+        fill=\RNNColor,bandfill=\RNNColor,%
+        height=10,width={10},depth=10}};
+
+\pic[shift={(-2,-15,0)}] at (cr5-east) {RightBandedBox={name=cr6_7,caption=BiLSTM 1,%
+        fill=\RNNColor,bandfill=\RNNColor,%
+        height=10,width={10},depth=10}};
+%%%%%%%%%%   
+%% fc8 -> cr8    
+
+\pic[shift={(2,1,0)}] at (cr6_7-east) {Box={name=c8,%
+        fill=\DropColor,%
+        height=10,width=1,depth=10}};
+%%%%%%%%%%%%%%%%%
+
+\pic[shift={(3,1,0)}] at (c8-east) {RightBandedBox={name=cr9,%
+        fill=\RNNColor,bandfill=\RNNColor,%
+        height=10,width={10},depth=10}};
+
+\pic[shift={(1,-1,0)}] at (c8-east) {RightBandedBox={name=cr9_2,caption=BiLSTM 2,%
+        fill=\RNNColor,bandfill=\RNNColor,%
+        height=10,width={10},depth=10}};
+
+\pic[shift={(2,0,0)}] at (rnnbox-east) {Box={name=attentionbox,%
+        fill=\AttentionColor,%
+        height=10,width=10,depth=10,caption=Attention Mechanism}};
+
+\pic[shift={(2,0,0)}] at (attentionbox-east) {Box={name=denselayer,%
+        fill=\DenseColor,%
+        height=11,width=2,depth=11,caption=Dense Layer}};
+\pic[shift={(0,0,0)}] at (denselayer-east) {Box={name=denselayerdrop,%
+        fill=\DropColor,%
+        height=11,width=1,depth=11}};
+
+\pic[shift={(3,0,0)}] at (denselayer-east) {Box={name=softmax,%
+        fill=\SoftmaxColor,%
+        height=35,width=1,depth=35,caption=Softmax-Output}};
+  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Draw connections
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\draw [connection]  (cr1-east)    -- node {\midarrow} (p1-west);
+\draw [connection]  (p1-east)    -- node {\midarrow} (cnnbox-west);
+
+\draw [connection]  (cnnbox-west)    -- node {\midarrow} (cr2-north);
+
+\draw [connection]  (p2-east)    -- node {\midarrow} (cr3-west);
+\draw [connection]  (p3-east)    -- node {\midarrow} (cr4-west);
+\draw [connection]  (p4-east)    -- node {\midarrow} (cnnbox-east);
+\draw [connection]  (cnnbox-east)    -- node {\midarrow} (cr5-west);
+\draw [connection]  (cr5-east)    -- node {\midarrow} (rnnbox-west);
+\draw [connection]  (rnnbox-west)    -- node {\midarrow} (cr6_7-north);
+\draw [connection]  (rnnbox-west)    -- node {\midarrow} (cr6_7_2-north);
+\draw [connection]  (cr9-east)    -- node {\midarrow} (rnnbox-east);
+\draw [connection]  (cr9_2-east)    -- node {\midarrow} (rnnbox-east);
+\draw [connection]  (rnnbox-east)    -- node {\midarrow} (attentionbox-west);
+\draw [connection]  (cr6_7_2-east) -- node {\midarrow} (c8-west);
+\draw [connection]  (attentionbox-east) -- node {\midarrow} (denselayer-west);
+\draw [connection]  (cr6_7-east) -- node {\midarrow} (c8-west);
+\draw [connection]  (c8-east)    -- node {\midarrow} (cr9-west);
+\draw [connection]  (c8-east)    -- node {\midarrow} (cr9_2-west);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Draw Dotted Edges 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\draw[densely dashed]
+(denselayer-nearnortheast) -- (softmax-nearnorthwest)
+(denselayer-nearsoutheast) -- (softmax-nearsouthwest)
+(denselayer-farsoutheast)  -- (softmax-farsouthwest)
+(denselayer-farnortheast)  -- (softmax-farnorthwest)
+;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Legend
+\begin{scope}[shift={(27,-8)}, font=\footnotesize\sffamily]
+    \node[fill=\InputColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Input Processing] at (0,0) {};
+    \node[fill=\MelSpecColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Mel-Spectrogram] at (0,-1) {};
+    \node[fill=\ConvColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge CNN Layer] at (0,-2) {};
+    \node[fill=\BNColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Batch Normalization] at (0,-3) {};
+    \node[fill=\DropColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Dropout] at (0,-4) {};
+    \node[fill=\RNNColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge RNN Module (BiLSTM Layers)] at (0,-5) {};
+    \node[fill=\AttentionColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Attention Mechanism] at (0,-6) {};
+    \node[fill=\DenseColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Dense Layer] at (0,-7) {};
+    \node[fill=\SoftmaxColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Softmax Output] at (0,-8) {};
+    \node[fill=\PoolColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Max Pooling] at (0,-9) {};
+    \node[fill=\FeatureColor,draw,minimum height=0.65cm,minimum width=0.65cm,label=right:\Huge Feature Sequence] at (0,-10) {};
+\end{scope}
+\end{tikzpicture}
+\end{document}\grid

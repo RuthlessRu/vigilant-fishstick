@@ -33,6 +33,12 @@
 \usepackage{microtype}      % microtypography
 \usepackage{xcolor}         % colors
 \usepackage{subfiles}
+\usepackage{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning, 3d}
+\graphicspath{{./sections/}}
+\subimport{sections/layers/}{init}
+\usepackage{sections/my_colors}
 
 \title{Formatting Instructions For NeurIPS 2023}
 
@@ -86,6 +92,8 @@
 \subfile{sections/work_division}
 
 \subfile{sections/architecture}
+\vspace{20pt}
+\includestandalone[mode=buildnew, width=\textwidth]{architecture_figure}
 
 \bibliographystyle{abbrvnat}
 \bibliography{references}
