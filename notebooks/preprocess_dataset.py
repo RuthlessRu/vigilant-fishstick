@@ -5,6 +5,7 @@ import torchaudio.transforms as T
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import hashlib
 
 def trim_silence(waveform, threshold=1e-4):
     if waveform.dim() > 1:
@@ -32,9 +33,9 @@ def extract_mel_spectrogram(waveform, sr=16000, n_mels=64, fmax=8000, hop_length
     mel_spectrogram_db = T.AmplitudeToDB()(mel_spectrogram)
     return mel_spectrogram_db
 
-def preprocess_and_save_all(file_paths, labels, preprocess_fn, output_dir, device="cuda"):
+def preprocess_and_save(file_paths, labels, preprocess_fn, output_dir, device="cuda", subset_size=None):
     """
-    Preprocess the entire dataset and save mel spectrograms and labels.
+    Preprocess the dataset (or a subset) and save mel spectrograms and labels.
 
     Args:
         file_paths: List of file paths to audio files.
@@ -42,21 +43,29 @@ def preprocess_and_save_all(file_paths, labels, preprocess_fn, output_dir, devic
         preprocess_fn: Function to preprocess audio.
         output_dir: Directory to save preprocessed data.
         device: Device for preprocessing (e.g., "cuda").
+        subset_size: If provided, only preprocess this many samples.
     """
     os.makedirs(output_dir, exist_ok=True)
+
+    if subset_size is not None:
+        file_paths = file_paths[:subset_size]
+        labels = labels[:subset_size]
+        print(f"Processing {subset_size} samples...")
 
     for idx, (file_path, label) in enumerate(tqdm(zip(file_paths, labels), total=len(file_paths))):
         waveform, _ = preprocess_fn(file_path, device="cpu")  # Preprocess waveform on CPU
         waveform = waveform.to(device)  # Move to GPU for spectrogram
         mel_spectrogram = extract_mel_spectrogram(waveform, device=device)
 
-        # Save mel spectrogram and label
+        print(f"Saving file {file_path}, label: {label}")
+
+        # Save mel spectrogram and class index label
         torch.save(
             {"mel_spectrogram": mel_spectrogram.cpu(), "label": torch.tensor(label)},
             os.path.join(output_dir, f"data_{idx}.pt"),
         )
 
-    print(f"Saved {len(file_paths)} preprocessed files to {output_dir}")
+    print(f"Saved {len(file_paths)} preprocessed samples to {output_dir}")
 
 
 def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
@@ -81,34 +90,29 @@ def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
 
 
 if __name__ == "__main__":
-    # Define your dataset directory and output directories
     dataset_dir = os.path.expanduser("~/.cache/kagglehub/datasets/ejlok1")
     output_dir = "./preprocessed_data"
     train_output_dir = os.path.join(output_dir, "train")
     val_output_dir = os.path.join(output_dir, "val")
     test_output_dir = os.path.join(output_dir, "test")
 
-    # Initialize variables
     file_paths = []
-    labels = []
+    emotions = []
 
-    # Traverse the dataset directory to collect file paths and labels
     for root, dirs, files in os.walk(dataset_dir):
         for file in files:
             if file.endswith(".wav"):
-                emotion = os.path.basename(root)  # Take the folder name as the emotion label
+                emotion = os.path.basename(root)
                 file_paths.append(os.path.join(root, file))
-                labels.append(emotion)
+                emotions.append(emotion)
 
-    # Encode labels
+    labels = [label.lower().split('_')[1] if '_' in label else label.lower() for label in emotions]
     label_encoder = LabelEncoder()
     encoded_labels = label_encoder.fit_transform(labels)
 
-    # One-hot encode labels
     onehot_encoder = OneHotEncoder(sparse_output=False)
     y_onehot = onehot_encoder.fit_transform(encoded_labels.reshape(-1, 1)).astype("float32")
 
-    # Split the dataset into train, validation, and test sets
     X_train_val, X_test, y_train_val, y_test = train_test_split(
         file_paths, y_onehot, test_size=0.2, stratify=y_onehot, random_state=42
     )
@@ -116,14 +120,33 @@ if __name__ == "__main__":
         X_train_val, y_train_val, test_size=0.2, stratify=y_train_val, random_state=42
     )
 
+    # Hashing function to ensure no duplicate content
+    def hash_file(filepath):
+        """Generate a hash for a file to ensure unique contents."""
+        hasher = hashlib.md5()
+        with open(filepath, 'rb') as f:
+            buf = f.read()
+            hasher.update(buf)
+        return hasher.hexdigest()
+
+    # Hash the contents of files in each split
+    train_hashes = {hash_file(fp) for fp in X_train}
+    val_hashes = {hash_file(fp) for fp in X_val}
+    test_hashes = {hash_file(fp) for fp in X_test}
+
+    # Check for content overlaps
+    assert train_hashes.isdisjoint(val_hashes), "Overlap in file contents between train and validation!"
+    assert train_hashes.isdisjoint(test_hashes), "Overlap in file contents between train and test!"
+    assert val_hashes.isdisjoint(test_hashes), "Overlap in file contents between validation and test!"
+
     # Preprocess and save each dataset
     print("Preprocessing and saving training data...")
-    preprocess_and_save_all(X_train, y_train, preprocess_audio, train_output_dir, device="cuda")
+    preprocess_and_save(X_train, y_train, preprocess_audio, train_output_dir, device="cuda")
 
     print("Preprocessing and saving validation data...")
-    preprocess_and_save_all(X_val, y_val, preprocess_audio, val_output_dir, device="cuda")
+    preprocess_and_save(X_val, y_val, preprocess_audio, val_output_dir, device="cuda")
 
     print("Preprocessing and saving test data...")
-    preprocess_and_save_all(X_test, y_test, preprocess_audio, test_output_dir, device="cuda")
+    preprocess_and_save(X_test, y_test, preprocess_audio, test_output_dir, device="cuda")
 
     print("Preprocessing complete. Data saved to:", output_dir)

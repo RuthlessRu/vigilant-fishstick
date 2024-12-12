@@ -152,29 +152,32 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, device="c
 
             train_loss += loss.item()
             _, preds = torch.max(outputs, 1)
-            correct += (preds == labels.argmax(dim=1)).sum().item()
+            correct += (preds == labels).sum().item()
             total += labels.size(0)
 
             logging.info(f"Epoch {epoch + 1}, Batch {i + 1}: Took {time.time() - batch_start_time:.4f}s")
 
         train_accuracy = correct / total
+        if val_loader:
+            model.eval()
+            val_loss, correct, total = 0.0, 0, 0
+            with torch.no_grad():
+                for inputs, labels in val_loader:
+                    inputs, labels = inputs.to(device), labels.to(device)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
+                    val_loss += loss.item()
+                    _, preds = torch.max(outputs, 1)
+                    correct += (preds == labels).sum().item()
+                    total += labels.size(0)
 
-        model.eval()
-        val_loss, correct, total = 0.0, 0, 0
-        with torch.no_grad():
-            for inputs, labels in val_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item()
-                _, preds = torch.max(outputs, 1)
-                correct += (preds == labels.argmax(dim=1)).sum().item()
-                total += labels.size(0)
-
-        val_accuracy = correct / total
+            val_accuracy = correct / total
+        else:
+            val_loss, val_accuracy = None, None
         logging.info(f"Epoch {epoch + 1} completed in {time.time() - epoch_start_time:.4f}s")
         print(f"Epoch {epoch + 1}/{epochs}: Train Loss: {train_loss / len(train_loader):.4f}, Train Acc: {train_accuracy:.4f}")
-        print(f"  Val Loss: {val_loss / len(val_loader):.4f}, Val Acc: {val_accuracy:.4f}")
+        if val_loader:
+            print(f"  Val Loss: {val_loss / len(val_loader):.4f}, Val Acc: {val_accuracy:.4f}")
 
 def evaluate_model(model, test_loader, criterion, device="cuda"):
     model.eval()
@@ -187,7 +190,7 @@ def evaluate_model(model, test_loader, criterion, device="cuda"):
             test_loss += loss.item()
             
             _, preds = torch.max(outputs, 1)
-            correct += (preds == labels.argmax(dim=1)).sum().item()
+            correct += (preds == labels).sum().item()
             total += labels.size(0)
     
     accuracy = correct / total
@@ -207,21 +210,46 @@ if __name__ == "__main__":
     print(f"Current device: {device}")
 
     # Load preprocessed datasets
-    train_dataset = PreprocessedDataset("./preprocessed_data/train")
-    val_dataset = PreprocessedDataset("./preprocessed_data/val")
-    test_dataset = PreprocessedDataset("./preprocessed_data/test")
+    # train_dataset = PreprocessedDataset("./preprocessed_data/train")
+    # val_dataset = PreprocessedDataset("./preprocessed_data/val")
+    # test_dataset = PreprocessedDataset("./preprocessed_data/test")
 
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+    # train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+    # test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+
+    small_train_dataset = PreprocessedDataset("./preprocessed_data/small_train")
+    small_val_dataset = PreprocessedDataset("./preprocessed_data/small_val")
+    small_test_dataset = PreprocessedDataset("./preprocessed_data/small_test")
+    
+    small_train_loader = DataLoader(small_train_dataset, batch_size=2, shuffle=True, num_workers=0, pin_memory=True)
+    small_val_loader = DataLoader(small_val_dataset, batch_size=2, shuffle=True, num_workers=0, pin_memory=True)
+    small_test_loader = DataLoader(small_test_dataset, batch_size=2, shuffle=True, num_workers=0, pin_memory=True)
+
+    # for i in range(50):  # Display 5 examples
+    #     mel_spectrogram, label = small_train_dataset[i]
+    #     print(label)
+    
+    # import matplotlib.pyplot as plt
+    # dataset = PreprocessedDataset("./preprocessed_data/small_train")
+    # for i in range(50):  # Display 5 examples
+    #     mel_spectrogram, label = dataset[i]
+    #     plt.imshow(mel_spectrogram.squeeze(), aspect="auto", origin="lower")
+    #     print(label)
+    #     plt.title(f"Label: {label}")
+    #     plt.show()
 
     # Initialize and train model
-    model = ConvRNNWithAttention(num_classes=7)  # Adjust `num_classes` to match your dataset
+    model = ConvRNNWithAttention(num_classes=7)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=10)
+    train_model(model, small_train_loader, val_loader=small_val_loader, criterion=criterion, optimizer=optimizer, device=device, epochs=5)
+    evaluate_model(model, test_loader=small_test_loader, criterion=criterion, device=device)
 
-    # Evaluate the model
-    evaluate_model(model, test_loader, criterion, device=device)
+
+    # train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=10)
+
+    # # Evaluate the model
+    # evaluate_model(model, test_loader, criterion, device=device)
