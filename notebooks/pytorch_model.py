@@ -12,6 +12,8 @@ from sklearn.model_selection import train_test_split
 import torchaudio.transforms as T
 import kagglehub
 from multiprocessing import Lock
+import time
+import logging
 
 from torch.utils.data import Dataset, DataLoader
 
@@ -73,13 +75,14 @@ def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
 
     return waveform, target_sr
 
-def extract_mel_spectrogram(waveform, sr=16000, n_mels=128, fmax=8000, hop_length=512, device="cuda"):
+def extract_mel_spectrogram(waveform, sr=16000, n_mels=64, fmax=8000, hop_length=512, device="cuda"):
     # Define the MelSpectrogram transform
     mel_spectrogram_transform = T.MelSpectrogram(
         sample_rate=sr,
         n_mels=n_mels,
         f_max=fmax,
-        hop_length=hop_length
+        hop_length=hop_length,
+        n_fft=1024
     ).to(device)
 
     # Apply transform
@@ -104,31 +107,18 @@ class AudioDataset(Dataset):
         file_path = self.file_paths[idx]
         label = self.labels[idx]
 
-        # Preprocess the audio file
-        waveform, _ = self.preprocess_fn(file_path, device=self.device)
+        # Preprocess waveform on CPU
+        waveform, _ = self.preprocess_fn(file_path, device="cpu")  # Resampling, silence trimming, etc.
+        waveform = waveform.to(self.device)  # Move waveform to GPU
 
-        # Extract mel spectrogram
+        # Extract mel spectrogram on GPU
         mel_spectrogram = extract_mel_spectrogram(waveform, device=self.device)
 
         return mel_spectrogram, torch.tensor(label, device=self.device)
 
 def create_pytorch_dataloader(file_paths, labels, preprocess_fn, batch_size=32, shuffle=True, device="cuda"):
-    """
-    Creates a PyTorch DataLoader for audio data.
-
-    Args:
-        file_paths: List of file paths to audio files.
-        labels: List of corresponding labels.
-        preprocess_fn: Function for preprocessing audio.
-        batch_size: Batch size for the DataLoader.
-        shuffle: Whether to shuffle the data.
-        device: Device to perform processing (e.g., "cuda" or "cpu").
-
-    Returns:
-        PyTorch DataLoader object.
-    """
     dataset = AudioDataset(file_paths, labels, preprocess_fn, device=device)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=4, pin_memory=False)
     return dataloader
 
 class AttentionMechanism(nn.Module):
@@ -167,31 +157,28 @@ class AttentionMechanism(nn.Module):
         return weighted_inputs
     
 class ConvRNNWithAttention(nn.Module):
-    def __init__(self, input_shape, num_classes):
+    def __init__(self, num_classes):
         super(ConvRNNWithAttention, self).__init__()
 
         # Convolutional layers
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)  # Conv2D(32, (3, 3), padding='same')
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)  # Conv2D(64, (3, 3), padding='same')
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
 
-        self.pool = nn.MaxPool2d(2)  # MaxPooling2D((2, 2))
+        self.pool = nn.MaxPool2d(2)
         self.batch_norm1 = nn.BatchNorm2d(32)
         self.batch_norm2 = nn.BatchNorm2d(64)
         self.dropout = nn.Dropout(0.3)
 
-        # Reshape for RNN
-        self.reshape_dim = (input_shape[0] // 4) * (input_shape[1] // 4) * 64
-
-        # Bi-directional LSTMs
-        self.rnn1 = nn.LSTM(self.reshape_dim, 128, bidirectional=True, batch_first=True)  # LSTM(128, return_sequences=True)
-        self.rnn2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)  # LSTM(64, return_sequences=True)
+        # Placeholder for LSTMs
+        self.rnn1 = None
+        self.rnn2 = nn.LSTM(256, 64, bidirectional=True, batch_first=True)
 
         # Attention mechanism
         self.attention = AttentionMechanism(128)
 
         # Fully connected layers
-        self.fc1 = nn.Linear(128, 64)  # Dense(64)
-        self.fc2 = nn.Linear(64, num_classes)  # Dense(num_classes)
+        self.fc1 = nn.Linear(128, 64)
+        self.fc2 = nn.Linear(64, num_classes)
 
     def forward(self, x):
         # Convolutional layers
@@ -205,9 +192,16 @@ class ConvRNNWithAttention(nn.Module):
         x = self.batch_norm2(x)
         x = self.dropout(x)
 
+        # Compute reshape_dim dynamically
+        batch_size, channels, height, width = x.size()
+        reshape_dim = channels * height * width
+
         # Reshape for RNN input
-        batch_size = x.size(0)
-        x = x.view(batch_size, -1, self.reshape_dim)
+        x = x.view(batch_size, -1, reshape_dim)
+
+        # Dynamically initialize the first RNN layer
+        if self.rnn1 is None:
+            self.rnn1 = nn.LSTM(reshape_dim, 128, bidirectional=True, batch_first=True).to(x.device)
 
         # Bi-directional LSTMs
         x, _ = self.rnn1(x)
@@ -226,53 +220,106 @@ class ConvRNNWithAttention(nn.Module):
 
         return F.log_softmax(x, dim=-1)
 
+import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def trim_silence(waveform, threshold=1e-4):
+    start_time = time.time()
+    if waveform.dim() > 1:
+        reduced_waveform = waveform.mean(dim=0)  # Take the mean of channels
+    else:
+        reduced_waveform = waveform
+
+    non_silent_indices = torch.where(reduced_waveform.abs() > threshold)[0]
+
+    if len(non_silent_indices) == 0:
+        logging.info(f"Trimming silence: All silent. Took {time.time() - start_time:.4f}s")
+        return waveform
+
+    start, end = non_silent_indices[0], non_silent_indices[-1] + 1
+    logging.info(f"Trimming silence: Took {time.time() - start_time:.4f}s")
+    return waveform[:, start:end] if waveform.dim() > 1 else waveform[start:end]
+
+def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
+    start_time = time.time()
+    waveform, sr = torchaudio.load(file_path)
+    waveform = waveform.to(device)
+
+    if sr != target_sr:
+        resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=target_sr).to(device)
+        waveform = resampler(waveform)
+
+    waveform = trim_silence(waveform)
+    waveform = waveform / waveform.abs().max()
+
+    max_length = int(target_sr * duration)
+    if waveform.size(1) > max_length:
+        waveform = waveform[:, :max_length]
+    else:
+        pad_length = max_length - waveform.size(1)
+        waveform = torch.nn.functional.pad(waveform, (0, pad_length))
+
+    logging.info(f"Preprocessing {file_path}: Took {time.time() - start_time:.4f}s")
+    return waveform, target_sr
+
+def extract_mel_spectrogram(waveform, sr=16000, n_mels=64, fmax=8000, hop_length=512, device="cuda"):
+    start_time = time.time()
+    mel_spectrogram_transform = T.MelSpectrogram(
+        sample_rate=sr,
+        n_mels=n_mels,
+        f_max=fmax,
+        hop_length=hop_length,
+        n_fft=1024
+    ).to(device)
+    mel_spectrogram = mel_spectrogram_transform(waveform)
+    mel_spectrogram_db = T.AmplitudeToDB()(mel_spectrogram)
+    logging.info(f"Mel spectrogram extraction: Took {time.time() - start_time:.4f}s")
+    return mel_spectrogram_db
+
 def train_model(model, train_loader, val_loader, criterion, optimizer, device="cuda", epochs=30):
     model.to(device)
-    
+
     for epoch in range(epochs):
-        model.train()  # Set model to training mode
+        epoch_start_time = time.time()
+        model.train()
         train_loss, correct, total = 0.0, 0, 0
-        
-        # Training loop
-        for inputs, labels in train_loader:
+
+        for i, (inputs, labels) in enumerate(train_loader):
+            batch_start_time = time.time()
             inputs, labels = inputs.to(device), labels.to(device)
-            
-            # Forward pass
             outputs = model(inputs)
             loss = criterion(outputs, labels)
-            
-            # Backward pass and optimization
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
-            # Track metrics
+
             train_loss += loss.item()
             _, preds = torch.max(outputs, 1)
             correct += (preds == labels.argmax(dim=1)).sum().item()
             total += labels.size(0)
-        
+
+            logging.info(f"Epoch {epoch + 1}, Batch {i + 1}: Took {time.time() - batch_start_time:.4f}s")
+
         train_accuracy = correct / total
-        
-        # Validation loop
-        model.eval()  # Set model to evaluation mode
+
+        model.eval()
         val_loss, correct, total = 0.0, 0, 0
         with torch.no_grad():
             for inputs, labels in val_loader:
                 inputs, labels = inputs.to(device), labels.to(device)
-                
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()
-                
                 _, preds = torch.max(outputs, 1)
                 correct += (preds == labels.argmax(dim=1)).sum().item()
                 total += labels.size(0)
-        
+
         val_accuracy = correct / total
-        
-        print(f"Epoch {epoch + 1}/{epochs}:")
-        print(f"  Train Loss: {train_loss / len(train_loader):.4f}, Train Acc: {train_accuracy:.4f}")
+        logging.info(f"Epoch {epoch + 1} completed in {time.time() - epoch_start_time:.4f}s")
+        print(f"Epoch {epoch + 1}/{epochs}: Train Loss: {train_loss / len(train_loader):.4f}, Train Acc: {train_accuracy:.4f}")
         print(f"  Val Loss: {val_loss / len(val_loader):.4f}, Val Acc: {val_accuracy:.4f}")
 
 def evaluate_model(model, test_loader, criterion, device="cuda"):
@@ -292,31 +339,20 @@ def evaluate_model(model, test_loader, criterion, device="cuda"):
     accuracy = correct / total
     print(f"Test Loss: {test_loss / len(test_loader):.4f}, Test Accuracy: {accuracy:.4f}")
 
-def main():
-    # Initialize model, loss function, and optimizer
-    model = ConvRNNWithAttention(input_shape=(128, 79, 1), num_classes=y_train.shape[1])
-    criterion = nn.CrossEntropyLoss()  # Use CrossEntropyLoss as the criterion
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+if __name__ == "__main__":
+    # Ensure proper multiprocessing
+    mp.set_start_method("spawn", force=True)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-    # Create DataLoaders
-    train_loader = create_pytorch_dataloader(X_train, y_train, preprocess_audio, batch_size=32, shuffle=True, device="cuda")
-    val_loader = create_pytorch_dataloader(X_val, y_val, preprocess_audio, batch_size=32, shuffle=False, device="cuda")
-    test_loader = create_pytorch_dataloader(X_test, y_test, preprocess_audio, batch_size=32, shuffle=False, device="cuda")
-
-    # Train the model
-    train_model(model, train_loader, val_loader, criterion, optimizer, device="cuda", epochs=1)
-
-    # Evaluate the model
-    evaluate_model(model, test_loader, criterion, device="cuda")
-
-if __name__ == '__main__':
-    lock = Lock()
+    # Set device
     if torch.cuda.is_available():
         print("CUDA is available!")
         device = torch.device("cuda")
-    print("Current device:", device)
+    else:
+        device = torch.device("cpu")
+    print(f"Current device: {device}")
 
-
+    # Load dataset
     cache_dir = os.path.expanduser("~/.cache/kagglehub/datasets/ejlok1")
 
     # Check if the dataset exists
@@ -333,7 +369,7 @@ if __name__ == '__main__':
     for root, dirs, files in os.walk(tess_path):
         for file in files:
             if file.endswith('.wav'):
-                emotion = os.path.basename(root) # take base name as emotion
+                emotion = os.path.basename(root)
                 emotions.append(emotion)
                 file_paths.append(os.path.join(root, file))
 
@@ -342,25 +378,28 @@ if __name__ == '__main__':
     label_encoder = LabelEncoder()
     encoded_labels = label_encoder.fit_transform(labels)
     onehot_encoder = OneHotEncoder(sparse=False)
-    y_onehot = onehot_encoder.fit_transform(encoded_labels.reshape(-1, 1))
-    y_onehot = y_onehot.astype(np.float32)
-    y_onehot.shape
+    y_onehot = onehot_encoder.fit_transform(encoded_labels.reshape(-1, 1)).astype(np.float32)
 
-
+    # Train-test split
     X_train_val, X_test, y_train_val, y_test = train_test_split(
         file_paths, y_onehot, test_size=0.2, stratify=y_onehot, random_state=42
     )
-
     X_train, X_val, y_train, y_val = train_test_split(
         X_train_val, y_train_val, test_size=0.2, stratify=y_train_val, random_state=42
     )
 
-    dataloader = create_pytorch_dataloader(file_paths, labels, preprocess_audio, batch_size=32, shuffle=True, device="cuda")
+    # Create DataLoaders
+    train_loader = create_pytorch_dataloader(X_train, y_train, preprocess_audio, batch_size=16, shuffle=True, device="cuda")
+    val_loader = create_pytorch_dataloader(X_val, y_val, preprocess_audio, batch_size=16, shuffle=False, device="cuda")
+    test_loader = create_pytorch_dataloader(X_test, y_test, preprocess_audio, batch_size=16, shuffle=False, device="cuda")
 
-    train_loader = create_pytorch_dataloader(X_train, y_train, preprocess_audio, batch_size=32, shuffle=True, device="cuda")
-    val_loader = create_pytorch_dataloader(X_val, y_val, preprocess_audio, batch_size=32, shuffle=False, device="cuda")
-    test_loader = create_pytorch_dataloader(X_test, y_test, preprocess_audio, batch_size=32, shuffle=False, device="cuda")
+    # Initialize and train model
+    model = ConvRNNWithAttention(num_classes=y_train.shape[1])
 
-    mp.set_start_method("spawn", force=True)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    main()
+    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=1)
+
+    # Evaluate the model
+    evaluate_model(model, test_loader, criterion, device=device)
