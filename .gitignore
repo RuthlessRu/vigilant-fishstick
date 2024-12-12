@@ -1,1 +1,5 @@
 *.npy
+.vscode/
+Dockerfile
+pytorch-env
+.ipynb_checkpoints/
