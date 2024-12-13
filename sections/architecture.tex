@@ -3,8 +3,9 @@
 \begin{document}
 
 \section{Model Architecture}
-After a thorough investigation of the TESS Dataset, we propose a \hyperref[fig:architecture]{Convolutional
-Recurrent Neural Network (CRNN) architecture}.
+For SER, we use a \hyperref[fig:architecture]{Convolutional Recurrent Neural Network (CRNN) architecture}
+that provides both feature extraction and selection capabilities 
+from CNN and sequential learning from RNN. 
 
 \subsection{Input Processing}
 In order to ensure uniformity across the TESS dataset, we apply a standardized
@@ -63,10 +64,6 @@ The training strategy is specifically designed around the nuanced nature of
 emotional speech patterns. The model employs categorical cross-entropy loss
 (standard for multi-class classification), with the Adam optimizer for its
 ability to handle the inherent noise and variability in emotional expression \citep{Bhatlawande2024}.
-Additionally, to enhance the robustness of the model, we apply audio-specific
-data augmentation. Augmentations such as random pitch shifting and
-time-stretching effectively expand our dataset by introducing slight variability
-in existing data, in turn making our model less prone to overfitting \citep{Bhatlawande2024}. These protocols ensure model robustness, aiding us in our goal of building a truly useful and reliable voice-based emotion classifier.
 
 \begin{figure}[h]
     \centering
