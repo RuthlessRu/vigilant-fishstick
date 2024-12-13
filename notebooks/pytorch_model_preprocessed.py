@@ -15,6 +15,7 @@ from multiprocessing import Lock
 import time
 import logging
 from torch.utils.data import Dataset, DataLoader
+import matplotlib.pyplot as plt
 
 
 class PreprocessedDataset(Dataset):
@@ -135,14 +136,14 @@ class ConvRNNWithAttention(nn.Module):
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, device="cuda", epochs=30):
     model.to(device)
+    train_losses, val_losses = [], []
+    train_accuracies, val_accuracies = [], []
 
     for epoch in range(epochs):
-        epoch_start_time = time.time()
         model.train()
         train_loss, correct, total = 0.0, 0, 0
 
         for i, (inputs, labels) in enumerate(train_loader):
-            batch_start_time = time.time()
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
@@ -155,12 +156,14 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, device="c
             correct += (preds == labels).sum().item()
             total += labels.size(0)
 
-            logging.info(f"Epoch {epoch + 1}, Batch {i + 1}: Took {time.time() - batch_start_time:.4f}s")
-
         train_accuracy = correct / total
+        train_losses.append(train_loss / len(train_loader))
+        train_accuracies.append(train_accuracy)
+
+        val_loss, val_accuracy = 0.0, 0
         if val_loader:
             model.eval()
-            val_loss, correct, total = 0.0, 0, 0
+            correct, total = 0, 0
             with torch.no_grad():
                 for inputs, labels in val_loader:
                     inputs, labels = inputs.to(device), labels.to(device)
@@ -172,12 +175,36 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, device="c
                     total += labels.size(0)
 
             val_accuracy = correct / total
-        else:
-            val_loss, val_accuracy = None, None
-        logging.info(f"Epoch {epoch + 1} completed in {time.time() - epoch_start_time:.4f}s")
-        print(f"Epoch {epoch + 1}/{epochs}: Train Loss: {train_loss / len(train_loader):.4f}, Train Acc: {train_accuracy:.4f}")
+            val_losses.append(val_loss / len(val_loader))
+            val_accuracies.append(val_accuracy)
+
+        print(f"Epoch {epoch + 1}/{epochs}: Train Loss: {train_losses[-1]:.4f}, Train Acc: {train_accuracies[-1]:.4f}")
         if val_loader:
-            print(f"  Val Loss: {val_loss / len(val_loader):.4f}, Val Acc: {val_accuracy:.4f}")
+            print(f"  Val Loss: {val_losses[-1]:.4f}, Val Acc: {val_accuracies[-1]:.4f}")
+
+    # Plot training and validation metrics
+    plt.figure(figsize=(12, 6))
+    plt.subplot(1, 2, 1)
+    plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
+    if val_loader:
+        plt.plot(range(1, epochs + 1), val_losses, label='Validation Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Loss per Epoch')
+    plt.legend()
+
+    plt.subplot(1, 2, 2)
+    plt.plot(range(1, epochs + 1), train_accuracies, label='Train Accuracy')
+    if val_loader:
+        plt.plot(range(1, epochs + 1), val_accuracies, label='Validation Accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Accuracy per Epoch')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 
 def evaluate_model(model, test_loader, criterion, device="cuda"):
     model.eval()
@@ -210,21 +237,21 @@ if __name__ == "__main__":
     print(f"Current device: {device}")
 
     # Load preprocessed datasets
-    train_dataset = PreprocessedDataset("./preprocessed_data_small/train")
-    val_dataset = PreprocessedDataset("./preprocessed_data_small/val")
-    test_dataset = PreprocessedDataset("./preprocessed_data_small/test")
+    train_dataset = PreprocessedDataset("./preprocessed_data/train")
+    val_dataset = PreprocessedDataset("./preprocessed_data/val")
+    test_dataset = PreprocessedDataset("./preprocessed_data/test")
 
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=0, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0, pin_memory=True)
 
     # Initialize and train model
     model = ConvRNNWithAttention(num_classes=6)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    train_model(model, train_loader, None, criterion, optimizer, device=device, epochs=4)
+    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=30)
 
     # Evaluate the model
     evaluate_model(model, test_loader, criterion, device=device)
