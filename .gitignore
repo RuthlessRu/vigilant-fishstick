@@ -3,3 +3,4 @@
 Dockerfile
 pytorch-env
 .ipynb_checkpoints/
+preprocessed_data/

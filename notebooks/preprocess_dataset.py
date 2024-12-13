@@ -57,11 +57,11 @@ def preprocess_and_save(file_paths, labels, preprocess_fn, output_dir, device="c
         waveform = waveform.to(device)  # Move to GPU for spectrogram
         mel_spectrogram = extract_mel_spectrogram(waveform, device=device)
 
-        print(f"Saving file {file_path}, label: {label}")
+        print(f"Saving file {file_path}, label: {label.argmax()}")
 
         # Save mel spectrogram and class index label
         torch.save(
-            {"mel_spectrogram": mel_spectrogram.cpu(), "label": torch.tensor(label)},
+            {"mel_spectrogram": mel_spectrogram.cpu(), "label": torch.tensor(label.argmax())},
             os.path.join(output_dir, f"data_{idx}.pt"),
         )
 
