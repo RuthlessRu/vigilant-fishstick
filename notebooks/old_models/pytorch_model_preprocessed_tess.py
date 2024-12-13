@@ -210,21 +210,21 @@ if __name__ == "__main__":
     print(f"Current device: {device}")
 
     # Load preprocessed datasets
-    train_dataset = PreprocessedDataset("./preprocessed_data_small/train")
-    val_dataset = PreprocessedDataset("./preprocessed_data_small/val")
-    test_dataset = PreprocessedDataset("./preprocessed_data_small/test")
+    train_dataset = PreprocessedDataset("./preprocessed_data/train")
+    val_dataset = PreprocessedDataset("./preprocessed_data/val")
+    test_dataset = PreprocessedDataset("./preprocessed_data/test")
 
     # Create DataLoaders
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=4, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=4, shuffle=False, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=True)
 
     # Initialize and train model
-    model = ConvRNNWithAttention(num_classes=6)
+    model = ConvRNNWithAttention(num_classes=7)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    train_model(model, train_loader, None, criterion, optimizer, device=device, epochs=4)
+    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=30)
 
     # Evaluate the model
     evaluate_model(model, test_loader, criterion, device=device)

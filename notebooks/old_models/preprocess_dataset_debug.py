@@ -5,6 +5,9 @@ import torchaudio.transforms as T
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+import hashlib
+from collections import Counter
+import pandas as pd
 
 def trim_silence(waveform, threshold=1e-4):
     if waveform.dim() > 1:
@@ -71,6 +74,9 @@ def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
     waveform, sr = torchaudio.load(file_path)
     waveform = waveform.to(device)
 
+    if waveform.size(0) > 1:
+        waveform = waveform.mean(dim=0, keepdim=True)
+
     if sr != target_sr:
         resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=target_sr).to(device)
         waveform = resampler(waveform)
@@ -88,138 +94,199 @@ def preprocess_audio(file_path, target_sr=16000, duration=2.5, device="cuda"):
     return waveform, target_sr
 
 
+def parse_tess(dataset_dir):
+    """
+    Parse the TESS dataset and return file paths and labels.
+
+    Args:
+        dataset_dir (str): Path to the TESS dataset.
+
+    Returns:
+        List of tuples: (file_path, emotion_label)
+    """
+    emotion_map = {
+        "neutral": 0,   # Neutral
+        "happy": 1,     # Happy
+        "sad": 2,       # Sad
+        "angry": 3,     # Angry
+        "fear": 4,      # Fear
+        "disgust": 5,   # Disgust
+        "pleasant": 6,  # Surprised (to be removed)
+    }
+
+    file_paths = []
+    labels = []
+
+    for root, dirs, files in os.walk(dataset_dir):
+        for file in files:
+            if file.endswith(".wav"):
+                # Extract the emotion from the file path or filename
+                emotion = os.path.basename(root).lower()  # Folder name
+                if "_" in emotion:
+                    emotion = emotion.split("_")[1]  # Extract emotion part
+                
+                if emotion == "pleasant":
+                    continue
+                
+                if emotion in emotion_map:
+                    file_paths.append(os.path.join(root, file))
+                    labels.append(emotion_map[emotion])
+
+    return file_paths, labels
+
+def parse_ravdess(dataset_dir, gender="female", vocal_channel="speech"):
+    """
+    Parse the RAVDESS dataset and filter based on gender and modality.
+
+    Args:
+        dataset_dir (str): Path to the RAVDESS dataset.
+        gender (str): "female" or "male" to filter actors.
+        modality (str): "speech" or "song" to filter modality.
+
+    Returns:
+        List of tuples: (file_path, emotion_label)
+    """
+    emotion_map = {
+    1: 0,  # Neutral
+    3: 1,  # Happy
+    4: 2,  # Sad
+    5: 3,  # Angry
+    6: 4,  # Fear
+    7: 5,  # Disgust
+    }
+    gender_map = {"male": lambda x: int(x) % 2 == 1, "female": lambda x: int(x) % 2 == 0}
+    vocal_channel_map = {"speech": "01", "song": "02"}
+
+    file_paths = []
+    labels = []
+
+    # Traverse the directory structure
+    for root, dirs, files in os.walk(dataset_dir):
+        for dir_name in dirs:
+            if dir_name.startswith("Actor_"):  # Check for Actor_* directories
+                actor_id = int(dir_name.split("_")[1])  # Extract actor ID
+                if not gender_map[gender](actor_id):  # Filter by gender
+                    continue
+
+                actor_path = os.path.join(root, dir_name)
+                for file_name in os.listdir(actor_path):
+                    if file_name.endswith(".wav"):
+                        components = file_name.split("-")
+                        file_vocal_channel, emotion = components[1], components[2]
+                        if file_vocal_channel != vocal_channel_map[vocal_channel]:  # Filter by modality
+                            continue
+
+                        if int(emotion) == 2 or int(emotion) == 8: # skip calm and surprised
+                            continue
+
+                        file_path = os.path.join(actor_path, file_name)
+                        file_paths.append(file_path)
+                        labels.append(emotion_map[int(emotion)])
+
+    return file_paths, labels
+
+def parse_cremad(dataset_dir, demographics_file):
+    """
+    Parse the CREMA-D dataset and filter for female actors.
+
+    Args:
+        dataset_dir (str): Path to the CREMA-D audio files.
+        demographics_file (str): Path to VideoDemographics.csv.
+
+    Returns:
+        List of tuples: (file_path, emotion_label)
+    """
+    # Unified emotion map
+    emotion_map = {
+        "NEU": 0,  # Neutral
+        "HAP": 1,  # Happy/Joy
+        "SAD": 2,  # Sad
+        "ANG": 3,  # Angry
+        "FEA": 4,  # Fear
+        "DIS": 5,  # Disgust
+    }
+
+    df = pd.read_csv(demographics_file)
+    female_actor_ids = df[df["Sex"] == "Female"]["ActorID"].astype(str).tolist()
+
+    file_paths = []
+    labels = []
+
+    # Traverse dataset directory
+    for root, dirs, files in os.walk(dataset_dir):
+        for file in files:
+            if file.endswith(".wav"):
+                actor_id, emotion_code = file.split("_")[0], file.split("_")[2]
+                if actor_id in female_actor_ids and emotion_code in emotion_map:
+                    file_path = os.path.join(root, file)
+                    file_paths.append(file_path)
+                    labels.append(emotion_map[emotion_code])
+
+    return file_paths, labels    
+
+
+from collections import defaultdict
+import random
+
+def create_small_subset(file_paths, labels, samples_per_class):
+    data_by_class = defaultdict(list)
+    for path, label in zip(file_paths, labels):
+        data_by_class[label].append(path)
+
+    subset_file_paths = []
+    subset_labels = []
+    for label, paths in data_by_class.items():
+        sampled_paths = random.sample(paths, min(len(paths), samples_per_class))
+        subset_file_paths.extend(sampled_paths)
+        subset_labels.extend([label] * len(sampled_paths))
+
+    return subset_file_paths, subset_labels
+
+
 if __name__ == "__main__":
-    # Define your dataset directory and output directories
-    dataset_dir = os.path.expanduser("~/.cache/kagglehub/datasets/ejlok1")
-    output_dir = "./preprocessed_data"
+    cremad_dir = os.path.expanduser("~/.cache/kagglehub/datasets/ejlok1/cremad")
+    ravdess_dir = os.path.expanduser("~/.cache/kagglehub/datasets/uwrfkaggler")
+    tess_dir = os.path.expanduser("~/.cache/kagglehub/datasets/ejlok1/toronto-emotional-speech-set-tess")
+
+    cremad_dem_file = os.path.expanduser("~/.cache/kagglehub/VideoDemographics.csv")
+
+    output_dir = "./preprocessed_data_small"
+
     train_output_dir = os.path.join(output_dir, "train")
     val_output_dir = os.path.join(output_dir, "val")
     test_output_dir = os.path.join(output_dir, "test")
 
-    # Initialize variables
-    file_paths = []
-    emotions = []
+    # Parse datasets
+    tess_file_paths, tess_labels = parse_tess(tess_dir)
+    ravdess_file_paths, ravdess_labels = parse_ravdess(ravdess_dir)
+    cremad_file_paths, cremad_labels = parse_cremad(cremad_dir, cremad_dem_file)
 
-    # Traverse the dataset directory to collect file paths and labels
-    for root, dirs, files in os.walk(dataset_dir):
-        for file in files:
-            if file.endswith(".wav"):
-                emotion = os.path.basename(root)  # Take the folder name as the emotion label
-                file_paths.append(os.path.join(root, file))
-                emotions.append(emotion)
+    # Combine TESS and CREMA-D for training
+    training_file_paths = tess_file_paths + cremad_file_paths
+    training_labels = tess_labels + cremad_labels
+
+    # Use RAVDESS for testing
+    testing_file_paths = ravdess_file_paths
+    testing_labels = ravdess_labels
 
     # Encode labels
-    labels = [label.lower().split('_')[1] if '_' in label else label.lower() for label in emotions]
     label_encoder = LabelEncoder()
-    encoded_labels = label_encoder.fit_transform(labels)
+    encoded_training_labels = label_encoder.fit_transform(training_labels)
+    encoded_testing_labels = label_encoder.transform(testing_labels)
 
-    # One-hot encode labels
-    onehot_encoder = OneHotEncoder(sparse_output=False)
-    y_onehot = onehot_encoder.fit_transform(encoded_labels.reshape(-1, 1)).astype("float32")
+    # Create small subsets
+    train_files, train_labels = create_small_subset(training_file_paths, encoded_training_labels, samples_per_class=3)
+    val_files, val_labels = create_small_subset(training_file_paths, encoded_training_labels, samples_per_class=3)
+    test_files, test_labels = create_small_subset(testing_file_paths, encoded_testing_labels, samples_per_class=3)
 
-    # Split the dataset into train, validation, and test sets
-    X_train_val, X_test, y_train_val, y_test = train_test_split(
-        file_paths, y_onehot, test_size=0.2, stratify=y_onehot, random_state=42
-    )
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_val, y_train_val, test_size=0.2, stratify=y_train_val, random_state=42
-    )
-
-    from collections import defaultdict
-
-    def group_by_class(file_paths, labels):
-        class_dict = defaultdict(list)
-        for file_path, label in zip(file_paths, labels):
-            class_dict[label.argmax()].append(file_path)
-        return class_dict
-    def create_balanced_subset(file_paths, labels, num_per_class=1):
-        class_dict = group_by_class(file_paths, labels)
-        subset_file_paths = []
-        subset_labels = []
-
-        for class_label, files in class_dict.items():
-            selected_files = files[:num_per_class]  # Select `num_per_class` files per class
-            subset_file_paths.extend(selected_files)
-            subset_labels.extend([class_label] * len(selected_files))
-
-        return subset_file_paths, subset_labels
-
-    small_train_dir = "./preprocessed_data/small_train"
-    small_val_dir = "./preprocessed_data/small_val"
-    small_test_dir = "./preprocessed_data/small_test"
-
-    os.makedirs(small_train_dir, exist_ok=True)
-    os.makedirs(small_val_dir, exist_ok=True)
-    os.makedirs(small_test_dir, exist_ok=True)
-    
-    small_train_paths, small_train_labels = create_balanced_subset(X_train, y_train, num_per_class=10)
-    small_val_paths, small_val_labels = create_balanced_subset(X_val, y_val, num_per_class=5)
-    small_test_paths, small_test_labels = create_balanced_subset(X_test, y_test, num_per_class=5)
-
-    # print(small_test_labels[:50])
-
-    #     # Check for overlap between splits
-    # assert set(X_train).isdisjoint(X_val), "Overlap found between train and validation splits!"
-    # assert set(X_train).isdisjoint(X_test), "Overlap found between train and test splits!"
-    # assert set(X_val).isdisjoint(X_test), "Overlap found between validation and test splits!"
-
-    # # Check small subsets for overlaps
-    # assert set(small_train_paths).isdisjoint(small_val_paths), "Overlap found between small train and validation!"
-    # assert set(small_train_paths).isdisjoint(small_test_paths), "Overlap found between small train and test!"
-    # assert set(small_val_paths).isdisjoint(small_test_paths), "Overlap found between small validation and test!"
-
-    # from collections import Counter
-    # print(Counter(small_train_labels))
-    # print(Counter(small_val_labels))
-    # print(Counter(small_test_labels))
-
-    # import hashlib
-
-    # def hash_file(filepath):
-    #     """Generate a hash for a file to ensure unique contents."""
-    #     hasher = hashlib.md5()
-    #     with open(filepath, 'rb') as f:
-    #         buf = f.read()
-    #         hasher.update(buf)
-    #     return hasher.hexdigest()
-
-    # # Hash the contents of files in each split
-    # train_hashes = {hash_file(fp) for fp in small_train_paths}
-    # val_hashes = {hash_file(fp) for fp in small_val_paths}
-    # test_hashes = {hash_file(fp) for fp in small_test_paths}
-
-    # overlap_hashes = train_hashes.intersection(val_hashes)
-    # print(f"Overlapping hashes: {len(overlap_hashes)}")
-    # for hash_val in overlap_hashes:
-    #     print(f"Files in train with hash {hash_val}: {[fp for fp in small_train_paths if hash_file(fp) == hash_val]}")
-    #     print(f"Files in val with hash {hash_val}: {[fp for fp in small_val_paths if hash_file(fp) == hash_val]}")
-
-
-    # # Check for content overlaps
-    # assert train_hashes.isdisjoint(val_hashes), "Overlap in file contents between train and validation!"
-    # assert train_hashes.isdisjoint(test_hashes), "Overlap in file contents between train and test!"
-    # assert val_hashes.isdisjoint(test_hashes), "Overlap in file contents between validation and test!"
-
-
+    # Preprocess and save each dataset
     print("Preprocessing and saving small training data...")
-    preprocess_and_save(small_train_paths, small_train_labels, preprocess_audio, small_train_dir, device="cuda")
+    preprocess_and_save(train_files, train_labels, preprocess_audio, train_output_dir, device="cuda")
 
     print("Preprocessing and saving small validation data...")
-    preprocess_and_save(small_val_paths, small_val_labels, preprocess_audio, small_val_dir, device="cuda")
+    preprocess_and_save(val_files, val_labels, preprocess_audio, val_output_dir, device="cuda")
 
     print("Preprocessing and saving small test data...")
-    preprocess_and_save(small_test_paths, small_test_labels, preprocess_audio, small_test_dir, device="cuda")
+    preprocess_and_save(test_files, test_labels, preprocess_audio, test_output_dir, device="cuda")
 
-    print("Small dataset preprocessing complete. Data saved to:", output_dir)
-
-    # # Preprocess and save each dataset
-    # print("Preprocessing and saving training data...")
-    # preprocess_and_save_all(X_train, y_train, preprocess_audio, train_output_dir, device="cuda")
-
-    # print("Preprocessing and saving validation data...")
-    # preprocess_and_save_all(X_val, y_val, preprocess_audio, val_output_dir, device="cuda")
-
-    # print("Preprocessing and saving test data...")
-    # preprocess_and_save_all(X_test, y_test, preprocess_audio, test_output_dir, device="cuda")
-
-    # print("Preprocessing complete. Data saved to:", output_dir)
+    print("Preprocessing complete. Data saved to:", output_dir)
