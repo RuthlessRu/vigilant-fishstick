@@ -70,4 +70,16 @@ sequence. This leads to using attention mechanisms to improve the performance
 of LSTM networks by putting more emphasis on certain parts of the input 
 sequence.
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{../figure/architecture_figure.pdf}
+    \caption{First, audio inputs are processed into Mel-spectrograms. Mel-spectrograms 
+    go through a series of convolution, batch normalization, dropout, and max-pooling 
+    in the CNN module. The result is then a feature sequence that goes through 
+    two Bidirectional LSTM layers in the RNN module with dropout in between.
+    An attention mechanism is applied afterwards followed by a fully connected
+    layer with dropout. Finally, softmax is applied.}
+    \label{fig:architecture}
+\end{figure}
+
 \end{document}
