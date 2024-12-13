@@ -224,7 +224,7 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=10)
+    train_model(model, train_loader, val_loader, criterion, optimizer, device=device, epochs=30)
 
     # Evaluate the model
     evaluate_model(model, test_loader, criterion, device=device)
