@@ -194,7 +194,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
     plt.tight_layout()
     plt.show()
 
-
 def evaluate_model(model, test_loader, criterion, device="cuda"):
     model.eval()
     test_loss, correct, total = 0.0, 0, 0

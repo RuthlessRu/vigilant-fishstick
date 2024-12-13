@@ -90,7 +90,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         print(f"loading model weights from epoch w/ best validation acc: {best_val_accuracy:.4f}")
         model.load_state_dict(best_model_state)
 
-    # plot
+    # plot!
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
     plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
