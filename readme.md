@@ -15,6 +15,35 @@ Each dataset has been preprocessed to maintain consistency, focusing on audio fr
 
 ---
 
+## 🔍 **Data Exploration**
+
+The notebook `tess_explore.ipynb` is a file that we used to explore the TESS 
+dataset and understand how we can preprocess, augment, and experiment with data.
+
+### Original Unprocessed Audio
+
+![Example Original Waveform](./resources/example_original_waveform.png)
+
+<audio controls>
+  <source src="./resources/example_original_audio.wav" type="audio/wav">
+  Your browser does not support the audio element.
+</audio>
+
+![Example Original Waveform](./resources/example_original_spectrogram.png)
+
+### Preprocessed Audio
+
+![Example Original Waveform](./resources/example_preprocessed_waveform.png)
+
+<audio controls>
+  <source src="./resources/example_preprocessed_audio.wav" type="audio/wav">
+  Your browser does not support the audio element.
+</audio>
+
+![Example Original Waveform](./resources/example_preprocessed_spectrogram.png)
+
+---
+
 ## ⚙️ **Model Architecture**
 
 ### 1. Input Processing  
@@ -51,14 +80,29 @@ git clone https://github.com/RuthlessRu/vigilant-fishstick.git
 cd vigilant-fishstick/notebooks
 ```
 
-### 2. Download and Process Datasets
+### 2. Download Datasets from Kaggle
+
+```bash
+python3 data_retrieval.py
+```
+
+### 3. Process Datasets
 ```bash
 python3 preprocess_dataset.py
 ```
 
-### 3. Train Model
+### 4. Train and Evaluate Model
+
+Replece `<model>` with any of the following: `baseline_split2`, `baseline`, 
+`pytorch_conv_split2`, `pytorch_conv`, `pytorch_crnn_split2`, `pytorch_crnn`.
+
+- *Split2*: Combines TESS, CREMAD, and RAVDESS datasets, then splits them into 
+training, validation, and testing sets.
+- *Non-Split2*: Uses TESS and CREMAD for training and validation, while RAVDESS 
+is reserved for testing.
+
 ```bash
-python3 pytorch_crnn.py
+python3 <model>.py
 ```
 
 ---
