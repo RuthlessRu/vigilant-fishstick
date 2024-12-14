@@ -3,7 +3,14 @@
 
 \begin{document}
 \section{Data}
-The Toronto Emotional Speech Set (TESS), Crowd-Sourced Emotional Multimodal Actors Dataset (CREMA-D), and Ryerson Audio-Visual Database of Emotional Speech and Song (RAVDESS) are well-established datasets designed for emotion recognition in speech. We focus on six distinct emotions across all datasets: neutral, happy, sad, angry, fear, and disgust. TESS contains audio samples from two female actors (a younger and older adult), CREMA-D consists of 7,442 clips from 91 actors (48 male, 43 female), and RAVDESS includes recordings from 24 professional actors (12 female, 12 male). To maintain consistency, we only utilize recordings from female speakers across all datasets. We combine TESS and CREMA-D for our training set, with RAVDESS serving as an independent test set. This approach allows us to train on a diverse range of speakers while maintaining balanced representation across emotional classes, which is crucial for developing unbiased models.
+The Toronto Emotional Speech Set (TESS), Crowd-Sourced Emotional Multimodal Actors Dataset (CREMA-D), and Ryerson Audio-Visual Database of Emotional Speech and Song
+(RAVDESS) are well-established datasets designed for emotion recognition in speech. We focus on six distinct emotions across all datasets: neutral, happy, sad, angry,
+fear, and disgust. TESS contains audio samples from two female actors (a younger and older adult), CREMA-D consists of 7,442 clips from 91 actors (48 male, 43 female),
+and RAVDESS includes recordings from 24 professional actors (12 female, 12 male). To maintain consistency, we only utilize recordings from female speakers across all
+datasets. Then, we combine the TESS, CREMA-D, and RAVDESS datasets by splitting each dataset evenly into their respective train, validation, and test sets. Lastly, we
+merge each set of the same type (e.g., train sets, validation sets, test sets) together to create a unified dataset for training, validation, and testing purposes.
+This approach allows us to train on a diverse range of speakers while maintaining balanced representation across emotional classes, which is crucial for developing
+unbiased models.
 
 Additionally, to enhance the robustness of the model, we apply audio-specific
 data augmentation. Augmentations such as random pitch shifting and
