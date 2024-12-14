@@ -1,6 +1,6 @@
 # Speech Emotion Recognition Using CRNN
 
-This repository contains the implementation of a **Speech Emotion Recognition (SER)** model utilizing a **Convolutional Recurrent Neural Network (CRNN)**. The goal of this project is to classify human speech into six distinct emotions: **neutral**, **happy**, **sad**, **angry**, **fear**, and **disgust**. 
+This repository contains the implementation of a **Speech Emotion Recognition (SER)** model utilizing a **Convolutional Recurrent Neural Network (CRNN)**. The goal of this project is to classify female speech into six distinct emotions: **neutral**, **happy**, **sad**, **angry**, **fear**, and **disgust**. 
 
 
 ---
@@ -20,42 +20,32 @@ Each dataset has been preprocessed to maintain consistency, focusing on audio fr
 The notebook `tess_explore.ipynb` is a file that we used to explore the TESS 
 dataset and understand how we can preprocess, augment, and experiment with data.
 
-### Original Unprocessed Audio
+### [Original Unprocessed Audio](./resources/example_original_audio.wav)
 
 ![Example Original Waveform](./resources/example_original_waveform.png)
 
-<audio controls>
-  <source src="./resources/example_original_audio.wav" type="audio/wav">
-  Your browser does not support the audio element.
-</audio>
+![Example Original Spectrogram](./resources/example_original_spectrogram.png)
 
-![Example Original Waveform](./resources/example_original_spectrogram.png)
+### [Preprocessed Audio](./resources/example_preprocessed_audio.wav)
 
-### Preprocessed Audio
+![Example Preprocessed Waveform](./resources/example_preprocessed_waveform.png)
 
-![Example Original Waveform](./resources/example_preprocessed_waveform.png)
-
-<audio controls>
-  <source src="./resources/example_preprocessed_audio.wav" type="audio/wav">
-  Your browser does not support the audio element.
-</audio>
-
-![Example Original Waveform](./resources/example_preprocessed_spectrogram.png)
+![Example Preprocessed Spectrogram](./resources/example_preprocessed_spectrogram.png)
 
 ---
 
 ## ⚙️ **Model Architecture**
 
 ### 1. Input Processing  
-Raw audio is transformed into Mel-spectrograms with Fast-Fourier transformations  
+- Raw audio is transformed into Mel-spectrograms with Fast-Fourier transformations  
 to represent energy in a time-frequency domain.
 
 ### 2. CNN Module  
 - Two convolutional layers extract spatial features.  
-- Max-pooling, batch normalization, and dropout (0.3) are applied to reduce dimensions and prevent overfitting.
+- Max-pooling, batch normalization, and dropout are applied to reduce dimensions and prevent overfitting.
 
 ### 3. RNN Module  
-- Two Bidirectional LSTM layers capture temporal dependencies with 128 and 64 hidden units.  
+- Two Bidirectional LSTM layers capture temporal dependencies.  
 - Attention mechanisms enhance focus on key temporal features.
 
 ### 4. Output Layer  
