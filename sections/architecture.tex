@@ -8,32 +8,33 @@ that provides both feature extraction and selection capabilities
 from CNN and sequential learning from RNN. 
 
 \subsection{Input Processing}
-In order to ensure uniformity across the TESS dataset, we apply a standardized
+In order to ensure uniformity across our datasets, we apply a standardized
 preprocessing pipeline to the raw audio signals. First, each sound bite is
-resampled to a fixed rate and then normalized to a consistent amplitude. Second,
+resampled to 16kHz and then normalized to a consistent amplitude. Second,
 silence segments are removed to minimize irrelevant input (noise) \citep{Orhan2021}, and segmented
-to a fixed length; shorter samples are padded while longer samples are trimmed.
-Finally, each processed sample is converted into a Mel-spectrogram. In effect,
+to a fixed length of 2.5 seconds; shorter samples are padded while longer samples are trimmed.
+Finally, each processed sample is converted into a Mel-spectrogram with 64 mel bands and a maximum frequency of 8kHz. In effect,
 this transformation reduces the dimensionality of the audio data while
 preserving essential information about the temporal and spectral characteristics
 of the speech \citep{Orhan2021}.
 
 \subsection{Convolutional Layers}
-The CRNN architecture is initiated by a series of three-dimensional convolutional
-layers designed to extract progressively abstract features from the spectrogram
-input. The first block employs local feature detection, using small kernels to
-capture micro-level emotional indicators and basic acoustic patterns. As the
-layers deepen, the receptive fields get larger to capture broader, higher-level
+The CRNN architecture is initiated by two convolutional layers designed to extract 
+features from the spectrogram input. The first layer transforms the input using 32 filters 
+with 3×3 kernels to capture micro-level emotional indicators and basic acoustic patterns. 
+The second layer expands to 64 filters while maintaining the 3×3 kernel size to capture broader, higher-level
 abstractions, such as intonation patterns or general timbral characteristics of
 certain emotions. Each convolution is followed by a max-pooling layer which
 reduces the spatial dimensions of the feature maps. Moreover, batch
-normalization and dropout is applied after each convolutional layer to stabilize
+normalization and dropout (0.3) is applied after each convolutional layer to stabilize
 learning and prevent overfitting. These convolutional layers help the model ``learn effective salient features for SER and show excellent performances on several benchmark datasets'' \citep{Chen2018}.
+
 
 \subsection{Recurrent Layers}
 Following the convolutional layers, the model incorporates two bidirectional
-Long Short-Term Memory (BiLSTM) layers. Given that the audio data in TESS is
-relatively short and sequential, BiLSTMs are a practical choice as they capture
+Long Short-Term Memory (BiLSTM) layers. The first BiLSTM processes the reshaped features 
+with 128 hidden units in each direction, while the second uses 64 hidden units. Given that 
+the audio data is relatively short and sequential, BiLSTMs are a practical choice as they capture
 dependencies across time steps, and allow for a more nuanced understanding of
 emotional expression. Additionally, the bidirectional design of the model helps
 capture the full emotional arc of an utterance by analyzing past and future time
@@ -52,18 +53,20 @@ the strongest, thus possibly improving model performance.
 
 \subsection{Dense Layers and Output Layer}
 Finally, after both the CNN and RNN modules, the resulting features are passed
-through a fully-connected dense layer. This integration layer is crucial since
-it combines our high-level temporal and spatial features into a single, unified
-representation \citep{Chen2018}. To enhance generalization, dropout are applied within the layer.
-In turn, this refined representation helps transition our data into the final
-softmax output layer, producing a probability distribution across the seven
-emotion classes.
+through two fully-connected dense layers. The first dense layer reduces the dimension to 
+64 units with ReLU activation, followed by dropout (0.3) for regularization. This integration 
+layer is crucial since it combines our high-level temporal and spatial features into a single, unified
+representation \citep{Chen2018}. The final layer outputs logits for our six emotion classes 
+(neutral, happy, sad, angry, fear, and disgust), which are transformed into probabilities using softmax.
+
 
 \subsection{Training Protocol}
 The training strategy is specifically designed around the nuanced nature of
 emotional speech patterns. The model employs categorical cross-entropy loss
-(standard for multi-class classification), with the Adam optimizer for its
+(standard for multi-class classification), with the Adam optimizer (learning rate of 0.001) for its
 ability to handle the inherent noise and variability in emotional expression \citep{Bhatlawande2024}.
+We employ a ReduceLROnPlateau scheduler that reduces the learning rate by half when validation 
+loss plateaus, with a patience of 3 epochs. Training continues for 30 epochs with a batch size of 32.
 
 
 \end{document}

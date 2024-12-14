@@ -17,6 +17,9 @@ import time
 import logging
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from torch.utils.data import DataLoader, Dataset, random_split, ConcatDataset
 
 def create_baseline_model(num_classes):
     # load a pre-trained resnet
@@ -28,7 +31,7 @@ def create_baseline_model(num_classes):
     return model
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, device="cuda", epochs=30):
-    """Training our model
+    """ training the model as well as graphs.
     """
     model.to(device)
     train_losses, val_losses = [], []
@@ -76,12 +79,11 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
             val_accuracies.append(val_accuracy)
 
             scheduler.step(val_loss / len(val_loader))
-
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_model_state = model.state_dict()
 
-        print(f"epoch {epoch + 1}/{epochs}: train Loss: {train_losses[-1]:.4f}, train Acc: {train_accuracies[-1]:.4f}")
+        print(f"epoch {epoch + 1}/{epochs}: train loss: {train_losses[-1]:.4f}, train acc: {train_accuracies[-1]:.4f}")
         if val_loader:
             print(f"  val loss: {val_losses[-1]:.4f}, val acc: {val_accuracies[-1]:.4f}")
 
@@ -90,7 +92,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         print(f"loading model weights from epoch w/ best validation acc: {best_val_accuracy:.4f}")
         model.load_state_dict(best_model_state)
 
-    # plot!
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
     plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
@@ -113,29 +114,40 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
     plt.tight_layout()
     plt.show()
 
-
 def evaluate_model(model, test_loader, criterion, device="cuda"):
     model.eval()
     test_loss, correct, total = 0.0, 0, 0
+    all_preds = []
+    all_labels = []
+
     with torch.no_grad():
         for inputs, labels in test_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-            
+
             _, preds = torch.max(outputs, 1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
-    
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
     accuracy = correct / total
-    print(f"test loss: {test_loss / len(test_loader):.4f}, test accuracy: {accuracy:.4f}")
+    print(f"Test Loss: {test_loss / len(test_loader):.4f}, Test Accuracy: {accuracy:.4f}")
+
+    # compute and display confusion matrix
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(all_labels))
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.show()
 
 class PreprocessedDataset(Dataset):
     def __init__(self, data_dir):
         """
-        Args:
-            data_dir: Directory containing preprocessed .pt files.
+        takes in .pt files that are preprocessed.
         """
         self.data_dir = data_dir
         self.file_paths = sorted([os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith(".pt")])

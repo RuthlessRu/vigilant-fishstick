@@ -3,20 +3,18 @@
 \begin{document}
 
 \begin{abstract}
-Our project is about building a deep learning model that can recognize emotions
-in human speech. Our goal is to classify human speech into emotions such as
-happiness, sadness, anger, and  surprise. This could potentially allow other
-people to build programs such as virtual assistants or music apps that adjust
-their responses based on how a person feels.
+Our project focuses on building a deep learning model to classify human speech
+into emotions like happiness, sadness, anger, and surprise. Models capable of
+detecting human emotions would enable use cases such as virtual assistants
+or music apps that adjust their responses based on how a person feels.
 To achieve this, we propose to use a type of deep learning model called a 
 Convolutional Recurrent Neural Network. The idea is that our CRNN combines 
 layers that pick up important sound features with layers that track changes 
 over time, making it a good fit for picking up patterns in speech.
-Moreover, our training data will come from the Toronto Emotional Speech Set. 
-This data set has over 2800 audio samples spoken by two voice actresses. 
-Before feeding this data, we plan to apply data preprocessing techniques like 
-removing background noise and converting the audio to visual spectrograms. Then 
-we plan to implement a dynamic learning rate scheduler. This essentially allows 
+Moreover, our training data will come from the Toronto Emotional Speech Set.  
+Before feeding this data, the plan is to apply data preprocessing techniques like 
+removing background noise and converting the audio to visual spectrograms. Furthermore,
+a dynamic learning rate scheduler will be implemented. This essentially allows 
 us to adjust the learning rate of our CRNN during the training process, which 
 optimizes our training speed.
 Lastly, some extra techniques we plan to use to help generalize speech patterns 
