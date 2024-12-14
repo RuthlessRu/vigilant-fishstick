@@ -4,7 +4,7 @@
 
 \section{Discussion}
 
-Our CRNN model underperformed, achieving 61\% test accuracy compared to the 
+The CRNN model underperformed, achieving 61\% test accuracy compared to the 
 baseline ResNet's 79\%. This is likely due to the dataset's simplicity, which 
 led the RNN layers to overfit and reduced generalization.
 
@@ -30,10 +30,10 @@ image processing.
 
 \subsection{Training Using TESS/CREMA-D but Testing on RAVDESS}
 
-To test real-world performance, we trained our CRNN on TESS and CREMA-D 
+To test real-world performance, the CRNN model is trained on TESS and CREMA-D 
 and tested on RAVDESS, achieving only 25\% accuracy. Most predictions were 
 classified as "angry" due to differing voice patterns in RAVDESS. This 
-suggests our model, with limited training data, wouldn't generalize well 
+suggests the model, with limited training data, wouldn't generalize well 
 in real-world scenarios.
 
 \begin{figure}[ht]

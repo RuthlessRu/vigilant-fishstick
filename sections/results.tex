@@ -3,7 +3,7 @@
 \begin{document}
 
 \section{Results}
-We chose accuracy as our primary performance metric to evaluate our emotion 
+Accuracy was chosen as the primary performance metric to evaluate the emotion 
 classification model. This is because accuracy provides a straightforward 
 measure of the proportion of correctly classified samples. Moreover, with a 
 balanced dataset, accuracy alone is able to reflect the model's 
@@ -27,8 +27,7 @@ our CRNN model.
     \begin{minipage}{.5\textwidth}
       \centering
       \includegraphics[width=1.0\linewidth]{../resources/baseline_mixed.png}
-      \caption{Traing and validation accuracy of ResNet-based CNN baseline model
-      along with loss.}
+      \caption{Loss and accuracy of traing and validation data of ResNet-based CNN baseline model}
       \label{fig:baseline_mixed}
     \end{minipage}%
     \hfill
@@ -49,7 +48,7 @@ our CRNN model.
 % this, we decided to save Mel-spectrograms and test them with our CRNN model, 
 % but it didn't perform as well as we expected it to. 
 
-After training our model on three datasets (TESS, CREMA-D, and RAVDESS), our 
+After training the model on three datasets (TESS, CREMA-D, and RAVDESS), the 
 CRNN model achieved a validation accuracy of 0.64\% and a test accuracy of 61\%
 as shown in \autoref{fig:crnn_graph_mixed}.
 
@@ -58,7 +57,7 @@ as shown in \autoref{fig:crnn_graph_mixed}.
     \begin{minipage}{.5\textwidth}
       \centering
       \includegraphics[width=1.0\linewidth]{../resources/crnn_graph_mixed.png}
-      \caption{Traing and validation accuracy of CRNN model along with loss.}
+      \caption{Loss and accuracy of traing and validation data of CRNN model}
       \label{fig:crnn_graph_mixed}
     \end{minipage}%
     \hfill
