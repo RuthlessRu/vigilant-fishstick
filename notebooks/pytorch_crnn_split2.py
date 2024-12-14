@@ -15,6 +15,8 @@ import time
 import logging
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from torch.utils.data import DataLoader, Dataset, random_split, ConcatDataset
 
 
 class PreprocessedDataset(Dataset):
@@ -48,7 +50,7 @@ class AttentionMechanism(nn.Module):
         """
         attention = self.tanh(self.attention_layer(inputs))  # shape: (batch_size, sequence_length, 1)
         attention = F.softmax(attention.squeeze(-1), dim=-1)  # shape: (batch_size, sequence_length)
-        attention = attention.unsqueeze(-1)  # Shape: (batch_size, sequence_length, 1)
+        attention = attention.unsqueeze(-1)  # shape: (batch_size, sequence_length, 1)
         weighted_inputs = inputs * attention  # element-wise
         return weighted_inputs
     
@@ -111,13 +113,14 @@ class ConvRNNWithAttention(nn.Module):
         return F.log_softmax(x, dim=-1)
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, device="cuda", epochs=30):
-    """ training the model as well as graphs.
-    """
+    """ train the model and display confusion matrix for highest validation accuracy """
     model.to(device)
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
     best_val_accuracy = 0
     best_model_state = None
+    best_val_preds = []
+    best_val_labels = []
 
     for epoch in range(epochs):
         model.train()
@@ -144,6 +147,7 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
         if val_loader:
             model.eval()
             correct, total = 0, 0
+            all_preds, all_labels = [], []
             with torch.no_grad():
                 for inputs, labels in val_loader:
                     inputs, labels = inputs.to(device), labels.to(device)
@@ -154,22 +158,27 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
                     correct += (preds == labels).sum().item()
                     total += labels.size(0)
 
+                    all_preds.extend(preds.cpu().numpy())
+                    all_labels.extend(labels.cpu().numpy())
+
             val_accuracy = correct / total
             val_losses.append(val_loss / len(val_loader))
             val_accuracies.append(val_accuracy)
 
             scheduler.step(val_loss / len(val_loader))
+
             if val_accuracy > best_val_accuracy:
                 best_val_accuracy = val_accuracy
                 best_model_state = model.state_dict()
+                best_val_preds = all_preds
+                best_val_labels = all_labels
 
         print(f"epoch {epoch + 1}/{epochs}: train loss: {train_losses[-1]:.4f}, train acc: {train_accuracies[-1]:.4f}")
         if val_loader:
             print(f"  val loss: {val_losses[-1]:.4f}, val acc: {val_accuracies[-1]:.4f}")
 
-    # load best model
     if best_model_state is not None:
-        print(f"loading model weights from epoch w/ best validation acc: {best_val_accuracy:.4f}")
+        print(f"Loading model weights from epoch with highest validation accuracy: {best_val_accuracy:.4f}")
         model.load_state_dict(best_model_state)
 
     plt.figure(figsize=(12, 6))
@@ -194,22 +203,42 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
     plt.tight_layout()
     plt.show()
 
+    if best_val_preds and best_val_labels:
+        cm = confusion_matrix(best_val_labels, best_val_preds)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(best_val_labels))
+        disp.plot(cmap=plt.cm.Blues)
+        plt.title("Confusion Matrix for Highest Validation Accuracy")
+        plt.show()
+
+
 def evaluate_model(model, test_loader, criterion, device="cuda"):
     model.eval()
     test_loss, correct, total = 0.0, 0, 0
+    all_preds = []
+    all_labels = []
+
     with torch.no_grad():
         for inputs, labels in test_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             test_loss += loss.item()
-            
+
             _, preds = torch.max(outputs, 1)
             correct += (preds == labels).sum().item()
             total += labels.size(0)
-    
+
+            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
+
     accuracy = correct / total
-    print(f"test loss: {test_loss / len(test_loader):.4f}, test acc: {accuracy:.4f}")
+    print(f"Test Loss: {test_loss / len(test_loader):.4f}, Test Accuracy: {accuracy:.4f}")
+
+    cm = confusion_matrix(all_labels, all_preds)
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.unique(all_labels))
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.show()
 
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
@@ -221,22 +250,33 @@ if __name__ == "__main__":
         device = torch.device("cpu")
     print(f"current device: {device}")
 
-    # load up the preprocessed data
-    train_dataset = PreprocessedDataset("./preprocessed_data/train")
-    val_dataset = PreprocessedDataset("./preprocessed_data/val")
-    test_dataset = PreprocessedDataset("./preprocessed_data/test")
+    train_crema_tess = PreprocessedDataset("./preprocessed_data/train")
+    test_ravdess = PreprocessedDataset("./preprocessed_data/test")
 
-    # dataloaders
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=0, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=0, pin_memory=True)
+    # combine
+    combined_dataset = ConcatDataset([train_crema_tess, test_ravdess])
+
+    total_size = len(combined_dataset)
+    train_size = int(0.7 * total_size)
+    val_size = int(0.15 * total_size)
+    test_size = total_size - train_size - val_size
+
+    # shuffle
+    new_train_dataset, new_val_dataset, new_test_dataset = random_split(combined_dataset, [train_size, val_size, test_size])
+
+    batch_size = 32
+    train_loader = DataLoader(new_train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
+    val_loader = DataLoader(new_val_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+    test_loader = DataLoader(new_test_dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+
 
     # model
     model = ConvRNNWithAttention(num_classes=6)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=True)
-    train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, device=device, epochs=30)
+
+    train_model(model, train_loader, val_loader, criterion, optimizer, scheduler, device="cuda", epochs=30)
 
     # evaluate
     evaluate_model(model, test_loader, criterion, device=device)
