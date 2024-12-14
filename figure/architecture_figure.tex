@@ -40,31 +40,31 @@
         fill=\ConvColor,bandfill=\ConvReluColor,%
         height=32,width={30},depth=30}};
 
-\pic[shift={(-5,-13,0)}] at (p1-east) {RightBandedBox={name=cr2,caption=conv2D 1,%
-        fill=\ConvColor,bandfill=\ConvReluColor,%
-        height=35,width={3,3},depth=35}};
+% \pic[shift={(-5,-13,0)}] at (p1-east) {RightBandedBox={name=cr2,caption=conv2D 1,%
+%         fill=\ConvColor,bandfill=\ConvReluColor,%
+%         height=35,width={3,3},depth=35}};
 
-% conv2_1,conv2_2
-\pic[shift={(-3.8,-13,0)}] at (p1-east) {RightBandedBox={name=bn1,%
-        fill=\BNColor,height=35,width={1},depth=35}};
+% % conv2_1,conv2_2
+% \pic[shift={(-3.8,-13,0)}] at (p1-east) {RightBandedBox={name=bn1,%
+%         fill=\BNColor,height=35,width={1},depth=35}};
 
-\pic[shift={(-3.6,-13,0)}] at (p1-east) {RightBandedBox={name=dp1,%
-        fill=\DropColor,height=35,width={1},depth=35}};
+% \pic[shift={(-3.6,-13,0)}] at (p1-east) {RightBandedBox={name=dp1,%
+%         fill=\DropColor,height=35,width={1},depth=35}};
 
-%pool2
-\pic[shift={(0.1,0,0)}] at (dp1-east) {Box={name=p2,%
-        fill=\PoolColor,opacity=0.5,height=30,width=1,depth=30}};
+% %pool2
+% \pic[shift={(0.1,0,0)}] at (dp1-east) {Box={name=p2,%
+%         fill=\PoolColor,opacity=0.5,height=30,width=1,depth=30}};
 
 
 %%%%%%%%%%
 % conv3_1,conv3_2
-\pic[shift={(2,0,0)}] at (p2-east) {RightBandedBox={name=cr3,caption=conv2D 2,%
+\pic[shift={(-5,-13,0)}] at (p1-east) {RightBandedBox={name=cr3,caption=conv2D 2,%
         fill=\ConvColor,bandfill=\ConvReluColor,%
         height=30,width={4,4,4},depth=30}};
-\pic[shift={(4.2,0,0)}] at (p2-east) {RightBandedBox={name=bn1,%
+\pic[shift={(-2.8,-13,0)}] at (p1-east)  {RightBandedBox={name=bn1,%
         fill=\BNColor,%
         height=30,width={1},depth=30}};
-\pic[shift={(4.4,0,0)}] at (p2-east) {RightBandedBox={name=bn1,%
+\pic[shift={(-2.6,-13,0)}] at (p1-east)  {RightBandedBox={name=bn1,%
         fill=\DropColor,%
         height=30,width={1},depth=30}};
 
@@ -73,13 +73,13 @@
         fill=\PoolColor,opacity=0.5,height=23,width=1,depth=23}};
 %%%%%%%%%%
 % conv4_1,conv4_2,conv4_3
-\pic[shift={(1.8,0,0)}] at (p3-east) {RightBandedBox={name=cr4,caption=conv2D 3,%
+\pic[shift={(2.8,0,0)}] at (p3-east) {RightBandedBox={name=cr4,caption=conv2D 3,%
         fill=\ConvColor,bandfill=\ConvReluColor,%
         height=23,width={7,7,7},depth=23}};
-\pic[shift={(6,0,0)}] at (p3-east) {RightBandedBox={name=bn3,%
+\pic[shift={(7,0,0)}] at (p3-east) {RightBandedBox={name=bn3,%
         fill=\BNColor,
         height=23,width={1},depth=23}};
-\pic[shift={(6.2,0,0)}] at (p3-east) {RightBandedBox={name=dp3,%
+\pic[shift={(7.2,0,0)}] at (p3-east) {RightBandedBox={name=dp3,%
         fill=\DropColor,
         height=23,width={1},depth=23}};
 %pool4
@@ -132,7 +132,7 @@
 
 \pic[shift={(3,0,0)}] at (denselayer-east) {Box={name=softmax,%
         fill=\SoftmaxColor,%
-        height=35,width=1,depth=35,caption=Softmax-Output}};
+        height=10,width=1,depth=1,caption=Softmax-Output}};
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Draw connections
@@ -140,9 +140,9 @@
 \draw [connection]  (cr1-east)    -- node {\midarrow} (p1-west);
 \draw [connection]  (p1-east)    -- node {\midarrow} (cnnbox-west);
 
-\draw [connection]  (cnnbox-west)    -- node {\midarrow} (cr2-north);
+\draw [connection]  (cnnbox-west)    -- node {\midarrow} (cr3-north);
 
-\draw [connection]  (p2-east)    -- node {\midarrow} (cr3-west);
+% \draw [connection]  (p2-east)    -- node {\midarrow} (cr3-west);
 \draw [connection]  (p3-east)    -- node {\midarrow} (cr4-west);
 \draw [connection]  (p4-east)    -- node {\midarrow} (cnnbox-east);
 \draw [connection]  (cnnbox-east)    -- node {\midarrow} (cr5-west);
@@ -157,16 +157,17 @@
 \draw [connection]  (cr6_7-east) -- node {\midarrow} (c8-west);
 \draw [connection]  (c8-east)    -- node {\midarrow} (cr9-west);
 \draw [connection]  (c8-east)    -- node {\midarrow} (cr9_2-west);
+\draw [connection]  (denselayer-east)    -- node {\midarrow} (softmax-west);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Draw Dotted Edges 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\draw[densely dashed]
-(denselayer-nearnortheast) -- (softmax-nearnorthwest)
-(denselayer-nearsoutheast) -- (softmax-nearsouthwest)
-(denselayer-farsoutheast)  -- (softmax-farsouthwest)
-(denselayer-farnortheast)  -- (softmax-farnorthwest)
-;
+% \draw[densely dashed]
+% (denselayer-nearnortheast) -- (softmax-nearnorthwest)
+% (denselayer-nearsoutheast) -- (softmax-nearsouthwest)
+% (denselayer-farsoutheast)  -- (softmax-farsouthwest)
+% (denselayer-farnortheast)  -- (softmax-farnorthwest)
+% ;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Legend
 \begin{scope}[shift={(27,-8)}, font=\footnotesize\sffamily]
