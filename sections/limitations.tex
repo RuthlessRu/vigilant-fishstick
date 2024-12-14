@@ -1,0 +1,41 @@
+\documentclass[../main.tex]{subfiles}
+
+\begin{document}
+
+\section{TODO: Limitations}
+
+% Describe some settings in which we’d expect your
+% approach to perform poorly, or where all existing
+% models fail. Try to guess or explain why these
+% limitations are the way they are. Give some examples
+% of possible extensions, ways to address these
+% limitations or open problems
+
+
+The greatest limitation with the proposed approach to SER is the lack of 
+a large and diverse dataset to train on. For instance, the TESS dataset contains 2800 
+audio data given by two female actors while the RAVDESS dataset contains
+1440 audio data given by 24 actors all from North America. Although the
+CREMA-D dataset does provide more diversity with 7442 audio data and 91 actors, 
+it isn't enough for the task of general SER. The use of audio data augmentation
+techniques mentioned before could help with alleviating this issue to 
+some degree, however, the real world has a variety of vocal nuances that
+are difficult to replicate with augmentation. A more ideal solution would be to 
+include a more diverse range actors. 
+
+Moreover, the model is trained on adult English speakers, so it is likely to 
+learn features not relevant to SER. This can lead poor performance with 
+non-English speakers. For example, the model may misclassify non-English speakers 
+as angry when they are in fact neutral. Again, an ideal solution would be to 
+include more diversity if the model is to be used in a real-world setting. 
+However, not only would it be difficult to collect more data but also the 
+computational resources required to train tens of thousands of audio data 
+is not always feasible, especially if audio is converted to spectrograms.
+
+Another limitation stems from the complexity of the model architecture. A complex 
+model has a higher risk of overfitting, especially when the dataset is 
+relatively small. This can be mitigated by using dropout layers and early stopping
+as proposed. However, if the dataset can only be as small as the TESS dataset, then 
+a simpler model, such as CNN with an attention mechanism, may be more appropriate.
+
+\end{document}
