@@ -10,10 +10,9 @@ or music apps that adjust their responses based on how a person feels.
 To achieve this, we propose to use a type of deep learning model called a 
 Convolutional Recurrent Neural Network. The idea is that our CRNN combines 
 layers that pick up important sound features with layers that track changes 
-over time, making it a good fit for picking up patterns in speech.
-Moreover, our training data will come from the Toronto Emotional Speech Set.  
-Before feeding this data, the plan is to apply data preprocessing techniques like 
-removing background noise and converting the audio to visual spectrograms. Furthermore,
+over time, making it a good fit for picking up patterns in speech. 
+Firstly, the plan is to apply data preprocessing techniques like 
+removing background noise and converting the audio to visual spectrograms. Then
 a dynamic learning rate scheduler will be implemented. This essentially allows 
 us to adjust the learning rate of our CRNN during the training process, which 
 optimizes our training speed.

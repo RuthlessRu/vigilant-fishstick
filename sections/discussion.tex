@@ -10,12 +10,12 @@ led the RNN layers to overfit and reduced generalization.
 
 CRNN's strength in modeling spatial and temporal features was underutilized, as 
 fixed spectrogram window sizes likely limited effective temporal capture. 
-Meanwhile, the ResNet, optimized for spatial features, was sufficient for 
+Meanwhile, the baseline ResNet, optimized for spatial features, was sufficient for 
 emotion classification without relying on temporal data.
 
 \subsection{Performance Along Other Dimensions}
 
-Switching to a CNN model improved test accuracy to 75\%. This is because 
+Switching to a simpler CNN model improved test accuracy to 75\%. This is because 
 CNNs excel at handling static image data, like spectrograms, by focusing on 
 spatial patterns and structures without the complexity of temporal dependencies. Thus, 
 classification performance is improved when the model focuses on the task of 
